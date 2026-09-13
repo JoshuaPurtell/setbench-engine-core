@@ -1,0 +1,8 @@
+{
+  "supertype": "Trainer",
+  "effect_ast": {
+    "op": "DealDamage",
+    "target": "OppActive",
+    "amount": 10
+  }
+}

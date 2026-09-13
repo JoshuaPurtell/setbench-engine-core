@@ -15,6 +15,8 @@ pub fn create() -> RuntimeHooks {
         register_triggers: runtime::register_triggers,
         apply_tool_stadium_effects: runtime::apply_tool_stadium_effects,
         can_attach_tool: runtime::can_attach_tool,
+        can_attach_energy: |_, _, _, _| true,
+        energy_units_override: |_, _, _, units| units,
         on_tool_attached: runtime::on_tool_attached,
         energy_provides_override: runtime::energy_provides_override,
         on_energy_attached: runtime::on_energy_attached,

@@ -1,0 +1,15 @@
+{
+  "supertype": "Trainer",
+  "effect_ast": {
+    "op": "If",
+    "predicate": "Always",
+    "then_effect": {
+      "op": "DrawCards",
+      "player": "Current",
+      "count": 2
+    },
+    "else_effect": {
+      "op": "NoOp"
+    }
+  }
+}

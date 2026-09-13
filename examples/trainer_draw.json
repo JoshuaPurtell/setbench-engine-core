@@ -1,0 +1,8 @@
+{
+  "supertype": "Trainer",
+  "effect_ast": {
+    "op": "DrawCards",
+    "player": "Current",
+    "count": 3
+  }
+}

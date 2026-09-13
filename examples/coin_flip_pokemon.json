@@ -1,0 +1,19 @@
+{
+  "supertype": "Pokemon",
+  "attacks": [
+    {
+      "effect_ast": {
+        "op": "FlipCoins",
+        "count": 1,
+        "on_heads": {
+          "op": "DealDamage",
+          "target": "OppActive",
+          "amount": 20
+        },
+        "on_tails": {
+          "op": "NoOp"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "supertype": "Pokemon",
+  "attacks": [
+    {
+      "effect_ast": {
+        "op": "DealDamage",
+        "target": "OppActive",
+        "amount": 20
+      }
+    }
+  ]
+}

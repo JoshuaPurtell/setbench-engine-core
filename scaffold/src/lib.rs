@@ -12,7 +12,7 @@ pub mod hp;
 mod registry;
 mod specs;
 
-pub use registry::create_hooks;
+pub use registry::{create_hooks, create_hooks_for};
 pub use specs::{PowerBodySpec, TrainerSpec};
 
 use serde_json::Value;

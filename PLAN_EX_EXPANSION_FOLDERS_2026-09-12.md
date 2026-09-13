@@ -23,7 +23,7 @@ Done in the engine worktree:
 Done in the CardCodeBench worktree:
 
 - Remaining-PvP vendor unhooked the same way.
-- Canonical remaining-PvP gold: `.private/set-pvp/gold/expansions/cg/cards/*.rs` (21 cards, including Marshtomp `cg-024`).
+- Canonical remaining-PvP gold stays in the private CardCodeBench overlay and is never copied into this public repository.
 - Remaining overlay still compiles `src/cards.rs` for Harbor, and also writes `expansions/cg/cards/<task>.rs`.
 - Set grader: `src/cardcodebench/set_grade.py` + `tools/grade_set.py`. One submission → 21 remaining-PvP packs, `--workers >= 8`, `--host` cargo-runs without Docker/Luna. Headline `cards_correct / 21`.
 - Set-task stubs + instruction: `tasks/pokemon/crystal_guardians/set-pvp/`.
