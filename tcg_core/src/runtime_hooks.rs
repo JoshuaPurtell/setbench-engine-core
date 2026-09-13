@@ -66,6 +66,10 @@ pub type CardHasPowerOrBodyFn = fn(&CardDefId) -> bool;
 pub type IsDoubleRainbowFn = fn(&CardDefId) -> bool;
 pub type PreventsAttackEffectsFn = fn(&GameState, CardInstanceId, CardInstanceId) -> bool;
 pub type ToolDiscardTimingOverrideFn = fn(&GameState, &CardDefId) -> Option<&'static str>;
+pub type EnergyUnitsFn = fn(&GameState, CardInstanceId, &CardInstance, &[Type]) -> usize;
+pub type RetreatCostOverrideFn = fn(&GameState, CardInstanceId, i32) -> i32;
+pub type TreatsPokemonAsDeltaFn = fn(&GameState, PlayerId) -> bool;
+pub type PreventsSpecialConditionsFn = fn(&GameState, CardInstanceId) -> bool;
 
 /// Runtime hooks vtable.
 ///
@@ -117,6 +121,14 @@ pub struct RuntimeHooks {
     pub prevents_attack_effects: PreventsAttackEffectsFn,
     /// Override tool discard timing (e.g., Memory Berry)
     pub tool_discard_timing_override: ToolDiscardTimingOverrideFn,
+    /// How many energy units an attached energy pays (DRE, Boost, Scramble).
+    pub energy_units: EnergyUnitsFn,
+    /// Override computed retreat cost after stat modifiers (Flotation, Holon Energy WP).
+    pub retreat_cost_override: RetreatCostOverrideFn,
+    /// Treat a player's in-play Pokemon as Delta species (Holon Veil).
+    pub treats_pokemon_as_delta: TreatsPokemonAsDeltaFn,
+    /// Prevent applying a special condition to a Pokemon (Holon Energy GL).
+    pub prevents_special_conditions: PreventsSpecialConditionsFn,
 }
 
 impl RuntimeHooks {
@@ -144,6 +156,10 @@ impl RuntimeHooks {
             is_double_rainbow: |_| false,
             prevents_attack_effects: |_, _, _| false,
             tool_discard_timing_override: |_, _| None,
+            energy_units: |_, _, _, _| 1,
+            retreat_cost_override: |_, _, base| base,
+            treats_pokemon_as_delta: |_, _| false,
+            prevents_special_conditions: |_, _| false,
         }
     }
 }

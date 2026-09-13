@@ -267,16 +267,14 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             ) {
                 return Err(ActionError::InvalidPhase);
             }
-            if crate::custom_abilities::def_id_matches(
-                &game
-                    .current_player()
-                    .hand
-                    .get(*energy_id)
-                    .ok_or(ActionError::CardNotInHand)?
-                    .def_id,
-                "CG",
-                88,
-            ) {
+            let energy_def_id = game
+                .current_player()
+                .hand
+                .get(*energy_id)
+                .ok_or(ActionError::CardNotInHand)?
+                .def_id
+                .clone();
+            if (game.hooks().is_double_rainbow)(&energy_def_id) {
                 let target = game
                     .current_player()
                     .active
@@ -2853,7 +2851,7 @@ fn tool_discard_timing<'a>(
         .get(&tool.def_id)
         .and_then(|meta| meta.trainer_effect.as_ref())
         .and_then(|effect| effect.get("discard").and_then(Value::as_str))
-        .or_else(|| crate::cg_engine::tool_discard_timing_override(&tool.def_id))
+        .or_else(|| (game.hooks().tool_discard_timing_override)(game, &tool.def_id))
 }
 
 #[cfg(test)]

@@ -379,6 +379,57 @@ pub fn execute_effect_with_source(
     execute_effect_with_source_and_targets(game, effect, source_id, None)
 }
 
+fn attack_type_for_printed_damage(
+    game: &GameState,
+    source_id: Option<CardInstanceId>,
+) -> Type {
+    if let Some(crate::game::PendingAttack::PreDamage {
+        attacker_id,
+        attack,
+        ..
+    }) = &game.pending_attack
+    {
+        game.attack_type_for(*attacker_id, attack)
+    } else {
+        source_id
+            .and_then(|id| {
+                let slot = game.slot_by_id(id)?;
+                slot.attacks
+                    .first()
+                    .map(|attack| game.attack_type_for(id, attack))
+                    .or_else(|| slot.types.first().copied())
+            })
+            .unwrap_or(Type::Colorless)
+    }
+}
+
+fn apply_active_weakness_resistance(
+    game: &GameState,
+    target_id: CardInstanceId,
+    attack_type: Type,
+    mut damage: u32,
+) -> u32 {
+    let active = game.players.iter().any(|player| {
+        player.active.as_ref().map(|slot| slot.card.id) == Some(target_id)
+    });
+    if !active {
+        return damage;
+    }
+    if let Some(slot) = game.slot_by_id(target_id) {
+        if let Some(weakness) = slot.weakness {
+            if weakness.type_ == attack_type {
+                damage = damage.saturating_mul(weakness.multiplier as u32);
+            }
+        }
+        if let Some(resistance) = slot.resistance {
+            if resistance.type_ == attack_type {
+                damage = damage.saturating_sub(resistance.value as u32);
+            }
+        }
+    }
+    damage
+}
+
 pub fn execute_effect_with_source_and_targets(
     game: &mut GameState,
     effect: &EffectAst,
@@ -389,21 +440,25 @@ pub fn execute_effect_with_source_and_targets(
         EffectAst::NoOp => Ok(EffectOutcome::Applied),
         EffectAst::TextOnly { .. } => Ok(EffectOutcome::Applied),
         EffectAst::DealDamage { target, amount } => {
-            let counters = (*amount / 10) as u16;
+            let attack_type = attack_type_for_printed_damage(game, source_id);
             for target_id in resolve_target_ids(game, *target, selected_targets)? {
+                let damage = apply_active_weakness_resistance(game, target_id, attack_type, *amount);
+                let counters = (damage / 10) as u16;
                 let _ = game.place_damage_counters(target_id, counters, source_id, false);
             }
             Ok(EffectOutcome::Applied)
         }
         EffectAst::DealDamageIfDamaged { target, base, bonus } => {
+            let attack_type = attack_type_for_printed_damage(game, source_id);
             for target_id in resolve_target_ids(game, *target, selected_targets)? {
-                let mut total = *base;
+                let mut damage = *base;
                 if let Some(slot) = game.slot_by_id(target_id) {
                     if slot.damage_counters > 0 {
-                        total = total.saturating_add(*bonus);
+                        damage = damage.saturating_add(*bonus);
                     }
                 }
-                let counters = (total / 10) as u16;
+                let damage = apply_active_weakness_resistance(game, target_id, attack_type, damage);
+                let counters = (damage / 10) as u16;
                 let _ = game.place_damage_counters(target_id, counters, source_id, false);
             }
             Ok(EffectOutcome::Applied)
@@ -1042,7 +1097,7 @@ pub fn execute_effect_with_source_and_targets(
         }
         EffectAst::ApplySpecialCondition { target, condition } => {
             for target_id in resolve_target_ids(game, *target, selected_targets)? {
-                if game.holon_energy_gl_prevents_special_conditions(target_id) {
+                if (game.hooks().prevents_special_conditions)(game, target_id) {
                     continue;
                 }
                 let slot = match find_slot_mut(game, target_id) {

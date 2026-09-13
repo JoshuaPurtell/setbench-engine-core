@@ -23,7 +23,7 @@ use crate::modifiers::{
     resolve_stat_amount,
 };
 use crate::selectors::{CardSelector, PokemonSelector};
-use crate::{Action, ActionError, Attack, Stage};
+use crate::{Action, ActionError, Attack};
 use serde_json::Value;
 use crate::player::{PlayerState, PokemonSlot};
 use crate::zone::{CardInstance, Zone, ZoneKind, ZoneRef};
@@ -1598,22 +1598,11 @@ impl GameState {
             Some(slot) => slot,
             None => return false,
         };
+        let attached = slot.attached_energy.clone();
         let mut energy_types = Vec::new();
-        for energy in &slot.attached_energy {
+        for energy in &attached {
             let provides = self.energy_provides(energy);
-            let is_boost_energy =
-                crate::custom_abilities::def_id_matches(&energy.def_id, "DF", 87);
-            let is_scramble_energy =
-                crate::custom_abilities::def_id_matches(&energy.def_id, "DF", 89);
-            let mut units = crate::cg_engine::energy_units(slot, energy, &provides);
-            if is_boost_energy {
-                units = 3;
-            } else if is_scramble_energy {
-                let prize_diff = self.prize_diff_for(attacker_id);
-                if prize_diff > 0 && slot.stage != Stage::Basic && !slot.is_ex {
-                    units = 3;
-                }
-            }
+            let units = (self.hooks().energy_units)(self, attacker_id, energy, &provides);
             for _ in 0..units {
                 energy_types.push(provides.clone());
             }
@@ -1700,10 +1689,7 @@ impl GameState {
             None => return 0,
         };
         let base = (slot.retreat_cost as i32 + self.retreat_cost_modifier(pokemon_id)).max(0);
-        if base > 0 && self.holon_energy_wp_reduces_retreat(slot) {
-            return 0;
-        }
-        base
+        (self.hooks().retreat_cost_override)(self, pokemon_id, base)
     }
 
     pub fn discard_double_rainbow_if_basic(
@@ -1718,11 +1704,25 @@ impl GameState {
             PlayerId::P1 => 0,
             PlayerId::P2 => 1,
         };
+        let is_double_rainbow = self.hooks().is_double_rainbow;
         let slot = match self.players[owner_index].find_pokemon_mut(pokemon_id) {
             Some(slot) => slot,
             None => return false,
         };
-        let discarded = crate::cg_engine::discard_double_rainbow_if_basic(slot);
+        let discarded = if slot.stage != crate::Stage::Basic {
+            Vec::new()
+        } else {
+            let mut discarded = Vec::new();
+            slot.attached_energy.retain(|energy| {
+                if is_double_rainbow(&energy.def_id) {
+                    discarded.push(energy.clone());
+                    false
+                } else {
+                    true
+                }
+            });
+            discarded
+        };
         let removed_any = !discarded.is_empty();
         for energy in discarded {
             self.players[owner_index].discard.add(energy);
@@ -1894,104 +1894,6 @@ impl GameState {
         true
     }
 
-    pub fn holon_energy_wp_prevents_attack_effects(
-        &self,
-        attacker_id: crate::ids::CardInstanceId,
-        defender_id: crate::ids::CardInstanceId,
-    ) -> bool {
-        let attacker_owner = match self.owner_for_pokemon(attacker_id) {
-            Some(owner) => owner,
-            None => return false,
-        };
-        let defender_owner = match self.owner_for_pokemon(defender_id) {
-            Some(owner) => owner,
-            None => return false,
-        };
-        if attacker_owner == defender_owner {
-            return false;
-        }
-        let slot = match self.slot_by_id(defender_id) {
-            Some(slot) => slot,
-            None => return false,
-        };
-        if slot.is_ex {
-            return false;
-        }
-        let has_holon_wp = slot.attached_energy.iter().any(|energy| {
-            self.card_meta
-                .get(&energy.def_id)
-                .map(|meta| meta.name == "Holon Energy WP")
-                .unwrap_or(false)
-        });
-        if !has_holon_wp {
-            return false;
-        }
-        slot.attached_energy.iter().any(|energy| {
-            self.card_meta
-                .get(&energy.def_id)
-                .map(|meta| {
-                    meta.energy_kind.as_deref() == Some("Basic")
-                        && meta.provides.contains(&crate::Type::Water)
-                })
-                .unwrap_or(false)
-        })
-    }
-
-    pub fn holon_energy_gl_prevents_special_conditions(
-        &self,
-        pokemon_id: crate::ids::CardInstanceId,
-    ) -> bool {
-        let slot = match self.slot_by_id(pokemon_id) {
-            Some(slot) => slot,
-            None => return false,
-        };
-        if slot.is_ex {
-            return false;
-        }
-        let has_holon_gl = slot.attached_energy.iter().any(|energy| {
-            self.card_meta
-                .get(&energy.def_id)
-                .map(|meta| meta.name == "Holon Energy GL")
-                .unwrap_or(false)
-        });
-        if !has_holon_gl {
-            return false;
-        }
-        slot.attached_energy.iter().any(|energy| {
-            self.card_meta
-                .get(&energy.def_id)
-                .map(|meta| {
-                    meta.energy_kind.as_deref() == Some("Basic")
-                        && meta.provides.contains(&crate::Type::Grass)
-                })
-                .unwrap_or(false)
-        })
-    }
-
-    fn holon_energy_wp_reduces_retreat(&self, slot: &PokemonSlot) -> bool {
-        if slot.is_ex {
-            return false;
-        }
-        let has_holon_wp = slot.attached_energy.iter().any(|energy| {
-            self.card_meta
-                .get(&energy.def_id)
-                .map(|meta| meta.name == "Holon Energy WP")
-                .unwrap_or(false)
-        });
-        if !has_holon_wp {
-            return false;
-        }
-        slot.attached_energy.iter().any(|energy| {
-            self.card_meta
-                .get(&energy.def_id)
-                .map(|meta| {
-                    meta.energy_kind.as_deref() == Some("Basic")
-                        && meta.provides.contains(&crate::Type::Psychic)
-                })
-                .unwrap_or(false)
-        })
-    }
-
     pub fn ignore_weakness_for(
         &self,
         attacker_id: crate::ids::CardInstanceId,
@@ -2072,13 +1974,7 @@ impl GameState {
         attacker_id: crate::ids::CardInstanceId,
         defender_id: crate::ids::CardInstanceId,
     ) -> bool {
-        if self.holon_energy_wp_prevents_attack_effects(attacker_id, defender_id) {
-            return true;
-        }
         if self.detect_prevents_damage(attacker_id, defender_id) {
-            return true;
-        }
-        if crate::cg_engine::prevents_attack_effects(self, attacker_id, defender_id) {
             return true;
         }
         if (self.hooks().prevents_attack_effects)(self, attacker_id, defender_id) {
@@ -2503,7 +2399,7 @@ impl GameState {
     fn tool_discard_timing(&self, tool: &CardInstance) -> Option<&str> {
         self.tool_effect(tool)
             .and_then(|effect| effect.get("discard").and_then(Value::as_str))
-            .or_else(|| crate::cg_engine::tool_discard_timing_override(&tool.def_id))
+            .or_else(|| (self.hooks().tool_discard_timing_override)(self, &tool.def_id))
     }
 
     fn apply_between_turns_effects(&mut self) {
@@ -2871,7 +2767,7 @@ impl GameState {
         if !meta.is_pokemon {
             return false;
         }
-        self.player_has_holon_veil(card.owner)
+        (self.hooks().treats_pokemon_as_delta)(self, card.owner)
     }
 
     pub fn pokemon_is_delta(&self, pokemon_id: crate::ids::CardInstanceId) -> bool {
@@ -2920,18 +2816,6 @@ impl GameState {
         };
         target_slot.damage_counters = target_slot.damage_counters.saturating_add(1);
         true
-    }
-
-    fn player_has_holon_veil(&self, player: PlayerId) -> bool {
-        let player_state = match player {
-            PlayerId::P1 => &self.players[0],
-            PlayerId::P2 => &self.players[1],
-        };
-        player_state
-            .active
-            .iter()
-            .chain(player_state.bench.iter())
-            .any(|slot| crate::custom_abilities::def_id_matches(&slot.card.def_id, "DF", 1))
     }
 
     pub fn slot_from_card(&self, card: CardInstance) -> PokemonSlot {
@@ -3500,6 +3384,12 @@ impl GameState {
 
         match self.turn.phase {
             Phase::Setup => {
+                let mut coin = ChaCha8Rng::seed_from_u64(self.rng_seed);
+                self.turn.player = if coin.next_u64() % 2 == 0 {
+                    PlayerId::P1
+                } else {
+                    PlayerId::P2
+                };
                 self.turn.phase = Phase::StartOfTurn;
                 StepResult::Continue
             }
@@ -4052,6 +3942,9 @@ mod tests {
         let other_id = other.card.id;
         game.players[0].active = Some(ampharos);
         game.players[0].bench.push(other);
+        let mut hooks = crate::runtime_hooks::RuntimeHooks::empty();
+        hooks.treats_pokemon_as_delta = |_, player| player == PlayerId::P1;
+        game.set_hooks(hooks);
 
         assert!(game.pokemon_is_delta(other_id));
         let mut selector = PokemonSelector::default();

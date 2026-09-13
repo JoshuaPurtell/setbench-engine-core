@@ -4,15 +4,20 @@ Public Rust workspace for SetBench engine tasks.
 
 This repo contains:
 
-- `tcg_core/`: shared Pokemon TCG engine primitives and runtime hooks
+- `tcg_core/`: shared Pokemon TCG engine primitives and runtime hooks (no set collector numbers)
 - `tcg_rules_ex/`: rules extensions used by the engine
-- `scaffold/src/df/`: Dragon Frontiers reference set implementation
-- `scaffold/src/hp/`: Holon Phantoms reference set implementation
-- `scaffold/src/cg/`: neutral Crystal Guardians stubs used as task overlays
+- `scaffold/src/df/`: Dragon Frontiers expansion (`engine.rs` + per-card modules + `runtime.rs` merge facade)
+- `scaffold/src/cg/`: Crystal Guardians expansion add-on (`engine.rs`) plus card stubs
+- `scaffold/src/hp/`: Holon Phantoms placeholder
+
+Install one expansion per match:
+
+```rust
+game.set_hooks(tcg_expansions::create_hooks("DF"));
+```
 
 This repo intentionally does not contain:
 
-- Crystal Guardians gold implementations
 - hidden evaluation fixtures
 - held-out decklists or policy fixtures
 - task-specific train data
@@ -21,12 +26,5 @@ This repo intentionally does not contain:
 
 ```bash
 cargo check --package tcg_expansions
+cargo test --workspace
 ```
-
-## Image
-
-The companion container image is intended to be published as:
-
-- `ghcr.io/<org>/setbench-engine-core`
-
-Consumers should pin an immutable digest instead of using a mutable tag.

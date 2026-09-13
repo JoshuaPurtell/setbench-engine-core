@@ -1,14 +1,10 @@
-//! EngineBench TCG Expansions Scaffold
+//! EngineBench TCG Expansions
 //!
-//! This crate provides the scaffold for Pokemon TCG card implementations
-//! used by the EngineBench coding agent evaluation.
+//! - `cg/` — Crystal Guardians engine add-on + card stubs
+//! - `df/` — Dragon Frontiers reference (engine add-on + per-card modules + runtime facade)
+//! - `hp/` — Holon Phantoms placeholder
 //!
-//! Structure:
-//! - `cg/` - Crystal Guardians neutral stubs used by task overlays
-//! - `df/` - Dragon Frontiers reference implementations
-//! - `hp/` - Holon Phantoms reference implementations
-//!
-//! The registry provides the RuntimeHooks vtable that composes all expansions.
+//! `create_hooks(set)` installs one expansion. Do not merge CG+DF+HP into a match.
 
 pub mod cg;
 pub mod df;
