@@ -662,6 +662,20 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             if game.pending_prompt.is_none() {
                 return Err(ActionError::InvalidPrompt);
             }
+            match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+                Some(Prompt::ChooseTargets { count, options, .. }) => {
+                    return validate_targets(target_ids, options, *count, *count);
+                }
+                Some(Prompt::SelectBenchedPokemon { target_player_idx, count, .. }) => {
+                    let player = game.players.get(*target_player_idx).ok_or(ActionError::InvalidPrompt)?;
+                    return validate_targets(target_ids, &player.bench.iter().map(|slot| slot.card.id).collect::<Vec<_>>(), *count, *count);
+                }
+                Some(Prompt::OpponentSelectsBenchedPokemon { player, .. }) => {
+                    let state = match player { crate::PlayerId::P1 => &game.players[0], crate::PlayerId::P2 => &game.players[1] };
+                    return validate_targets(target_ids, &state.bench.iter().map(|slot| slot.card.id).collect::<Vec<_>>(), 1, 1);
+                }
+                _ => {}
+            }
             let prompt = game.pending_prompt.as_ref().map(|p| &p.prompt);
             let (options, min, max) = match prompt {
                 Some(Prompt::ChoosePokemonInPlay { options, min, max, .. }) => {
@@ -673,15 +687,6 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
                     max,
                     ..
                 }) => (valid_targets.as_slice(), *min, *max),
-                Some(Prompt::ChooseTargets { count, options, .. }) => (options.as_slice(), *count, *count),
-                Some(Prompt::SelectBenchedPokemon { target_player_idx, count, .. }) => {
-                    let player = game.players.get(*target_player_idx).ok_or(ActionError::InvalidPrompt)?;
-                    return validate_targets(target_ids, &player.bench.iter().map(|slot| slot.card.id).collect::<Vec<_>>(), *count, *count);
-                }
-                Some(Prompt::OpponentSelectsBenchedPokemon { player, .. }) => {
-                    let state = match player { crate::PlayerId::P1 => &game.players[0], crate::PlayerId::P2 => &game.players[1] };
-                    return validate_targets(target_ids, &state.bench.iter().map(|slot| slot.card.id).collect::<Vec<_>>(), 1, 1);
-                }
                 _ => return Err(ActionError::InvalidPrompt),
             };
             if target_ids.is_empty() {
