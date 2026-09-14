@@ -681,10 +681,10 @@ impl GameState {
                 }
             }
         }
-        
+
         // Suppress warnings in test mode or when RUST_TEST environment variable is set
         let is_test_mode = cfg!(test) || std::env::var("RUST_TEST").is_ok();
-        
+
         if !is_test_mode && missing_count > 0 {
             // Only log unique card types, not every instance, to reduce noise
             if missing_card_types.len() <= 10 {
