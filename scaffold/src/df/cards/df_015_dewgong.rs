@@ -56,7 +56,10 @@ pub fn attack_overrides(
         && attacker
             .attached_energy
             .iter()
-            .filter(|energy| game.energy_provides(energy).contains(&tcg_core::Type::Water))
+            .filter(|energy| {
+                game.energy_provides(energy)
+                    .contains(&tcg_core::Type::Water)
+            })
             .count()
             >= 2
     {

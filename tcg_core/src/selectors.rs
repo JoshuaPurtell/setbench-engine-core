@@ -50,11 +50,7 @@ impl PokemonSelector {
         matches
     }
 
-    fn iter_slots<'a>(
-        &self,
-        game: &'a GameState,
-        for_player: PlayerId,
-    ) -> Vec<&'a PokemonSlot> {
+    fn iter_slots<'a>(&self, game: &'a GameState, for_player: PlayerId) -> Vec<&'a PokemonSlot> {
         let (me, opp) = match for_player {
             PlayerId::P1 => (&game.players[0], &game.players[1]),
             PlayerId::P2 => (&game.players[1], &game.players[0]),
@@ -162,6 +158,8 @@ impl PokemonSelector {
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub struct CardSelector {
+    #[serde(default)]
+    pub any_of: Vec<CardSelector>,
     pub name: Option<String>,
     pub is_pokemon: Option<bool>,
     pub is_energy: Option<bool>,
@@ -183,6 +181,8 @@ pub struct CardSelector {
     pub energy_kind: Option<String>,
     #[serde(default)]
     pub energy_types: Vec<Type>,
+    #[serde(default)]
+    pub type_any: Vec<Type>,
 }
 
 impl CardSelector {
@@ -196,12 +196,30 @@ impl CardSelector {
                 return false;
             }
         }
+        if !self.type_any.is_empty()
+            && !meta.types.iter().any(|type_| self.type_any.contains(type_))
+        {
+            return false;
+        }
         let mut selector = self.clone();
         selector.is_delta = None;
         selector.matches_meta(meta)
     }
 
     pub fn matches_meta(&self, meta: &crate::CardMeta) -> bool {
+        if !self.any_of.is_empty()
+            && !self
+                .any_of
+                .iter()
+                .any(|selector| selector.matches_meta(meta))
+        {
+            return false;
+        }
+        if !self.type_any.is_empty()
+            && !meta.types.iter().any(|type_| self.type_any.contains(type_))
+        {
+            return false;
+        }
         if let Some(name) = self.name.as_ref() {
             if meta.name != *name {
                 return false;
@@ -279,7 +297,10 @@ impl CardSelector {
             }
         }
         if !self.energy_types.is_empty()
-            && !self.energy_types.iter().any(|type_| meta.provides.contains(type_))
+            && !self
+                .energy_types
+                .iter()
+                .any(|type_| meta.provides.contains(type_))
         {
             return false;
         }

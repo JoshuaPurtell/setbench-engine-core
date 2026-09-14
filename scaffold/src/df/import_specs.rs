@@ -261,7 +261,10 @@ pub fn power_effect_ast(number: &str, power_name: &str, kind: &str) -> Option<Va
 }
 
 pub fn trainer_effect_ast(number: &str, card_name: &str, trainer_kind: &str) -> Option<Value> {
-    if trainer_kind == "Supporter" && number == "79" && card_name == "Professor Elm's Training Method" {
+    if trainer_kind == "Supporter"
+        && number == "79"
+        && card_name == "Professor Elm's Training Method"
+    {
         return Some(json!({
             "op": "SearchDeckWithSelector",
             "player": "Current",
@@ -395,7 +398,8 @@ pub fn trainer_effect_ast(number: &str, card_name: &str, trainer_kind: &str) -> 
         }));
     }
     DF_TRAINERS.iter().find_map(|spec| {
-        if spec.number == number && spec.card_name == card_name && spec.trainer_kind == trainer_kind {
+        if spec.number == number && spec.card_name == card_name && spec.trainer_kind == trainer_kind
+        {
             Some(custom_trainer_ast("DF", spec))
         } else {
             None
@@ -770,25 +774,22 @@ mod tests {
     #[test]
     fn df_power_specs_all_have_custom_ast() {
         for spec in DF_POWERS {
-            let effect = power_effect_ast(spec.number, spec.power_name, spec.kind)
-                .unwrap_or_else(|| panic!("missing DF power: {} {}", spec.card_name, spec.power_name));
+            let effect =
+                power_effect_ast(spec.number, spec.power_name, spec.kind).unwrap_or_else(|| {
+                    panic!("missing DF power: {} {}", spec.card_name, spec.power_name)
+                });
             let op = effect.get("op").and_then(Value::as_str).unwrap_or("");
             assert_eq!(
-                op,
-                "Custom",
+                op, "Custom",
                 "DF power {} {} should use Custom op",
-                spec.card_name,
-                spec.power_name
+                spec.card_name, spec.power_name
             );
             let id = effect.get("id").and_then(Value::as_str).unwrap_or("");
             let expected_id = format!("DF-{}:{}", spec.number, spec.power_name);
             assert_eq!(
-                id,
-                expected_id,
+                id, expected_id,
                 "DF power {} {} should have id {}",
-                spec.card_name,
-                spec.power_name,
-                expected_id
+                spec.card_name, spec.power_name, expected_id
             );
         }
     }
@@ -797,27 +798,30 @@ mod tests {
     fn df_trainer_specs_all_have_custom_ast() {
         for spec in DF_TRAINERS {
             let effect = trainer_effect_ast(spec.number, spec.card_name, spec.trainer_kind)
-                .unwrap_or_else(|| panic!("missing DF trainer: {} {}", spec.card_name, spec.number));
+                .unwrap_or_else(|| {
+                    panic!("missing DF trainer: {} {}", spec.card_name, spec.number)
+                });
             let op = effect.get("op").and_then(Value::as_str).unwrap_or("");
             if op == "ToolDamageModifier" {
                 assert_eq!(
-                    op,
-                    "ToolDamageModifier",
+                    op, "ToolDamageModifier",
                     "DF trainer {} should use ToolDamageModifier op",
                     spec.card_name
                 );
             } else {
-                assert_eq!(op, "Custom", "DF trainer {} should use Custom op", spec.card_name);
+                assert_eq!(
+                    op, "Custom",
+                    "DF trainer {} should use Custom op",
+                    spec.card_name
+                );
             }
             if op != "ToolDamageModifier" {
                 let id = effect.get("id").and_then(Value::as_str).unwrap_or("");
                 let expected_id = format!("DF-{}:{}", spec.number, spec.card_name);
                 assert_eq!(
-                    id,
-                    expected_id,
+                    id, expected_id,
                     "DF trainer {} should have id {}",
-                    spec.card_name,
-                    expected_id
+                    spec.card_name, expected_id
                 );
             }
         }

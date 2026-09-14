@@ -18,9 +18,8 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 29;
 pub const NAME: &str = "Electabuzz δ";
 
-use tcg_core::{CardInstanceId, GameState, PlayerId};
 use crate::df::helpers::owner_for_source;
-
+use tcg_core::{CardInstanceId, GameState, PlayerId};
 
 pub fn execute_power_of_evolution(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let owner = match owner_for_source(game, source_id) {

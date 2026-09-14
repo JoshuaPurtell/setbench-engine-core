@@ -78,16 +78,16 @@ impl Zone {
     }
 
     pub fn peek_top(&self, count: usize) -> Vec<CardInstance> {
+        self.cards.iter().rev().take(count).cloned().collect()
+    }
+
+    pub fn peek_top_ids(&self, count: usize) -> Vec<CardInstanceId> {
         self.cards
             .iter()
             .rev()
             .take(count)
-            .cloned()
+            .map(|card| card.id)
             .collect()
-    }
-
-    pub fn peek_top_ids(&self, count: usize) -> Vec<CardInstanceId> {
-        self.cards.iter().rev().take(count).map(|card| card.id).collect()
     }
 
     pub fn reorder_top(&mut self, new_order: &[CardInstanceId]) -> bool {

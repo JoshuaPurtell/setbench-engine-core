@@ -12,7 +12,6 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 49;
 pub const NAME: &str = "Feebas δ";
 
-
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::{Attack, CardInstanceId, GameState};
 

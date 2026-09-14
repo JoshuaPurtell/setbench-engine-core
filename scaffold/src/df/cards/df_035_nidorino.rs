@@ -15,7 +15,6 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 35;
 pub const NAME: &str = "Nidorino δ";
 
-
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::{Attack, CardInstanceId, GameState};
 

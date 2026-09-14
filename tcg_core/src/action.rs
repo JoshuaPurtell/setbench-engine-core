@@ -5,53 +5,102 @@ use thiserror::Error;
 
 use crate::custom_abilities::register_card_triggers;
 use crate::event::GameEvent;
-use crate::ids::CardInstanceId;
 use crate::game::{GameState, PendingAttachFromDiscard};
-use crate::restrictions::RestrictionKind;
+use crate::ids::CardInstanceId;
 use crate::player::PokemonSlot;
 use crate::prompt::{Prompt, SelectionDestination};
-use crate::{
-    apply_damage_modifier,
-    execute_attack,
-    Attack,
-    CombatError,
-};
-use tcg_rules_ex::{Phase, WinCondition};
-use tcg_rules_ex::SpecialCondition;
+use crate::restrictions::RestrictionKind;
+use crate::{apply_damage_modifier, execute_attack, Attack, CombatError};
 use serde_json::Value;
+use tcg_rules_ex::SpecialCondition;
+use tcg_rules_ex::{Phase, WinCondition};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Action {
     Draw,
-    ChooseActive { card_id: CardInstanceId },
-    ChooseBench { card_ids: Vec<CardInstanceId> },
-    PlayBasic { card_id: CardInstanceId },
-    EvolveFromHand { card_id: CardInstanceId, target_id: CardInstanceId },
-    AttachEnergy { energy_id: CardInstanceId, target_id: CardInstanceId },
-    AttachTool { tool_id: CardInstanceId, target_id: CardInstanceId },
-    PlayStadium { card_id: CardInstanceId },
-    PlayTrainer { card_id: CardInstanceId },
-    UsePower { source_id: CardInstanceId, power_name: String },
-    DeclareAttack { attack: Attack },
+    ChooseActive {
+        card_id: CardInstanceId,
+    },
+    ChooseBench {
+        card_ids: Vec<CardInstanceId>,
+    },
+    PlayBasic {
+        card_id: CardInstanceId,
+    },
+    EvolveFromHand {
+        card_id: CardInstanceId,
+        target_id: CardInstanceId,
+    },
+    AttachEnergy {
+        energy_id: CardInstanceId,
+        target_id: CardInstanceId,
+    },
+    AttachTool {
+        tool_id: CardInstanceId,
+        target_id: CardInstanceId,
+    },
+    PlayStadium {
+        card_id: CardInstanceId,
+    },
+    PlayTrainer {
+        card_id: CardInstanceId,
+    },
+    UsePower {
+        source_id: CardInstanceId,
+        power_name: String,
+    },
+    DeclareAttack {
+        attack: Attack,
+    },
     /// Cancel a pending prompt (supported for ChooseAttack).
     CancelPrompt,
-    Retreat { to_bench_id: CardInstanceId },
-    ChooseAttachedEnergy { energy_ids: Vec<CardInstanceId> },
-    TakeCardsFromDeck { card_ids: Vec<CardInstanceId> },
-    TakeCardsFromDiscard { card_ids: Vec<CardInstanceId> },
-    ChoosePokemonTargets { target_ids: Vec<CardInstanceId> },
-    ReorderDeckTop { card_ids: Vec<CardInstanceId> },
-    DiscardCardsFromHand { card_ids: Vec<CardInstanceId> },
-    ReturnCardsFromHandToDeck { card_ids: Vec<CardInstanceId> },
-    ChooseCardsInPlay { card_ids: Vec<CardInstanceId> },
-    ChooseDefenderAttack { attack_name: String },
-    ChoosePokemonAttack { attack_name: String },
-    ChooseSpecialCondition { condition: SpecialCondition },
-    ChoosePrizeCards { card_ids: Vec<CardInstanceId> },
+    Retreat {
+        to_bench_id: CardInstanceId,
+    },
+    ChooseAttachedEnergy {
+        energy_ids: Vec<CardInstanceId>,
+    },
+    TakeCardsFromDeck {
+        card_ids: Vec<CardInstanceId>,
+    },
+    TakeCardsFromDiscard {
+        card_ids: Vec<CardInstanceId>,
+    },
+    ChoosePokemonTargets {
+        target_ids: Vec<CardInstanceId>,
+    },
+    ReorderDeckTop {
+        card_ids: Vec<CardInstanceId>,
+    },
+    DiscardCardsFromHand {
+        card_ids: Vec<CardInstanceId>,
+    },
+    ReturnCardsFromHandToDeck {
+        card_ids: Vec<CardInstanceId>,
+    },
+    ChooseCardsInPlay {
+        card_ids: Vec<CardInstanceId>,
+    },
+    ChooseDefenderAttack {
+        attack_name: String,
+    },
+    ChoosePokemonAttack {
+        attack_name: String,
+    },
+    ChooseSpecialCondition {
+        condition: SpecialCondition,
+    },
+    ChoosePrizeCards {
+        card_ids: Vec<CardInstanceId>,
+    },
     ConfirmPrompt,
-    ChooseNumber { number: usize },
+    ChooseNumber {
+        number: usize,
+    },
     /// Choose a new active Pokemon from bench after knockout
-    ChooseNewActive { card_id: CardInstanceId },
+    ChooseNewActive {
+        card_id: CardInstanceId,
+    },
     EndTurn,
     Concede,
 }
@@ -94,9 +143,18 @@ pub enum ActionError {
     TrainerNotAllowedThisTurn,
 }
 
-fn validate_targets(target_ids: &[CardInstanceId], options: &[CardInstanceId], min: usize, max: usize) -> Result<(), ActionError> {
+fn validate_targets(
+    target_ids: &[CardInstanceId],
+    options: &[CardInstanceId],
+    min: usize,
+    max: usize,
+) -> Result<(), ActionError> {
     let unique: HashSet<_> = target_ids.iter().copied().collect();
-    if unique.len() != target_ids.len() || target_ids.len() < min || target_ids.len() > max || target_ids.iter().any(|id| !options.contains(id)) {
+    if unique.len() != target_ids.len()
+        || target_ids.len() < min
+        || target_ids.len() > max
+        || target_ids.iter().any(|id| !options.contains(id))
+    {
         return Err(ActionError::InvalidPrompt);
     }
     Ok(())
@@ -105,17 +163,29 @@ fn validate_targets(target_ids: &[CardInstanceId], options: &[CardInstanceId], m
 fn effect_is_pre_damage_modifier(effect: &crate::EffectAst) -> bool {
     match effect {
         crate::EffectAst::FlipCoins {
-            on_heads,
-            on_tails,
-            ..
+            on_heads, on_tails, ..
         } => {
-            let heads_ok = matches!(on_heads.as_ref(), crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp);
-            let tails_ok = matches!(on_tails.as_ref(), crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp);
+            let heads_ok = matches!(
+                on_heads.as_ref(),
+                crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp
+            );
+            let tails_ok = matches!(
+                on_tails.as_ref(),
+                crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp
+            );
             heads_ok && tails_ok
         }
-        crate::EffectAst::FlipCoinsByPokemonCount { on_heads, on_tails, .. } => {
-            let heads_ok = matches!(on_heads.as_ref(), crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp);
-            let tails_ok = matches!(on_tails.as_ref(), crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp);
+        crate::EffectAst::FlipCoinsByPokemonCount {
+            on_heads, on_tails, ..
+        } => {
+            let heads_ok = matches!(
+                on_heads.as_ref(),
+                crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp
+            );
+            let tails_ok = matches!(
+                on_tails.as_ref(),
+                crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp
+            );
             heads_ok && tails_ok
         }
         crate::EffectAst::FlipCoinsVariableDamage { .. } => true,
@@ -250,6 +320,14 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             if !game.current_player().hand.contains(*card_id) {
                 return Err(ActionError::CardNotInHand);
             }
+            if game.is_restricted(
+                RestrictionKind::Evolve,
+                acting_player,
+                Some(*target_id),
+                None,
+            ) {
+                return Err(ActionError::InvalidPhase);
+            }
             if game.has_marker(*target_id, "PlayedThisTurn")
                 || game.has_marker(*target_id, "EvolvedThisTurn")
             {
@@ -260,7 +338,10 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             }
             Ok(())
         }
-        Action::AttachEnergy { energy_id, target_id } => {
+        Action::AttachEnergy {
+            energy_id,
+            target_id,
+        } => {
             if game.turn.phase != Phase::Main {
                 return Err(ActionError::InvalidPhase);
             }
@@ -283,7 +364,12 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
                 return Err(ActionError::InvalidPhase);
             }
             // Card rules such as "attach only to an Evolved Pokemon" come from hooks.
-            if !crate::custom_abilities::can_attach_energy(game, acting_player, *energy_id, *target_id) {
+            if !crate::custom_abilities::can_attach_energy(
+                game,
+                acting_player,
+                *energy_id,
+                *target_id,
+            ) {
                 return Err(ActionError::InvalidCardType);
             }
             if game.current_player().energy_attached_this_turn {
@@ -308,7 +394,10 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             }
             Ok(())
         }
-        Action::UsePower { source_id, power_name } => {
+        Action::UsePower {
+            source_id,
+            power_name,
+        } => {
             if game.turn.phase != Phase::Main {
                 return Err(ActionError::InvalidPhase);
             }
@@ -491,7 +580,10 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             // Allow empty attack name in Main phase - it will be handled in execute
             if game.turn.phase == Phase::Attack
                 && !attack.name.is_empty()
-                && !attacker.attacks.iter().any(|known| known.name == attack.name)
+                && !attacker
+                    .attacks
+                    .iter()
+                    .any(|known| known.name == attack.name)
             {
                 return Err(ActionError::InvalidPhase);
             }
@@ -525,7 +617,12 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             if game.has_marker(active_id, "CannotRetreat") {
                 return Err(ActionError::InvalidPhase);
             }
-            if game.is_restricted(RestrictionKind::Retreat, game.turn.player, Some(active_id), None) {
+            if game.is_restricted(
+                RestrictionKind::Retreat,
+                game.turn.player,
+                Some(active_id),
+                None,
+            ) {
                 return Err(ActionError::InvalidPhase);
             }
             // Prevent creating an impossible retreat-payment prompt.
@@ -555,14 +652,29 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             if game.pending_prompt.is_none() {
                 return Err(ActionError::InvalidPrompt);
             }
-            let (player, pokemon_id, count, min) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                Some(Prompt::ChooseAttachedEnergy { player, pokemon_id, count, min, .. }) => (*player, *pokemon_id, *count, min.unwrap_or(*count)),
-                Some(Prompt::OptionalDiscardAttachedEnergy { player, source_id, options, .. }) => {
-                    if energy_ids.len() > 1 || energy_ids.iter().any(|id| !options.contains(id)) { return Err(ActionError::InvalidPrompt); }
-                    (*player, *source_id, 1, 0)
-                }
-                _ => return Err(ActionError::InvalidPrompt),
-            };
+            let (player, pokemon_id, count, min) =
+                match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+                    Some(Prompt::ChooseAttachedEnergy {
+                        player,
+                        pokemon_id,
+                        count,
+                        min,
+                        ..
+                    }) => (*player, *pokemon_id, *count, min.unwrap_or(*count)),
+                    Some(Prompt::OptionalDiscardAttachedEnergy {
+                        player,
+                        source_id,
+                        options,
+                        ..
+                    }) => {
+                        if energy_ids.len() > 1 || energy_ids.iter().any(|id| !options.contains(id))
+                        {
+                            return Err(ActionError::InvalidPrompt);
+                        }
+                        (*player, *source_id, 1, 0)
+                    }
+                    _ => return Err(ActionError::InvalidPrompt),
+                };
             // Validate count - allow fewer if min allows it
             if energy_ids.len() < min || energy_ids.len() > count {
                 // Allow empty selection only if min is 0
@@ -574,9 +686,15 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
                 crate::PlayerId::P1 => &game.players[0],
                 crate::PlayerId::P2 => &game.players[1],
             };
-            let slot = target.find_pokemon(pokemon_id).ok_or(ActionError::TargetNotFound)?;
+            let slot = target
+                .find_pokemon(pokemon_id)
+                .ok_or(ActionError::TargetNotFound)?;
             for energy_id in energy_ids {
-                if !slot.attached_energy.iter().any(|card| card.id == *energy_id) {
+                if !slot
+                    .attached_energy
+                    .iter()
+                    .any(|card| card.id == *energy_id)
+                {
                     return Err(ActionError::TargetNotFound);
                 }
             }
@@ -598,8 +716,13 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
                     return Err(ActionError::InvalidPrompt);
                 }
             }
-            if let Some(Prompt::ChooseCardsFromDeck { count, min, max, options, .. }) =
-                game.pending_prompt.as_ref().map(|p| &p.prompt)
+            if let Some(Prompt::ChooseCardsFromDeck {
+                count,
+                min,
+                max,
+                options,
+                ..
+            }) = game.pending_prompt.as_ref().map(|p| &p.prompt)
             {
                 let required_min = min.unwrap_or(*count);
                 let required_max = max.unwrap_or(*count);
@@ -639,8 +762,13 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
                     return Err(ActionError::InvalidPrompt);
                 }
             }
-            if let Some(Prompt::ChooseCardsFromDiscard { count, min, max, options, .. }) =
-                game.pending_prompt.as_ref().map(|p| &p.prompt)
+            if let Some(Prompt::ChooseCardsFromDiscard {
+                count,
+                min,
+                max,
+                options,
+                ..
+            }) = game.pending_prompt.as_ref().map(|p| &p.prompt)
             {
                 let required_min = min.unwrap_or(*count);
                 let required_max = max.unwrap_or(*count);
@@ -672,21 +800,49 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
                 Some(Prompt::ChooseTargets { count, options, .. }) => {
                     return validate_targets(target_ids, options, *count, *count);
                 }
-                Some(Prompt::SelectBenchedPokemon { target_player_idx, count, .. }) => {
-                    let player = game.players.get(*target_player_idx).ok_or(ActionError::InvalidPrompt)?;
-                    return validate_targets(target_ids, &player.bench.iter().map(|slot| slot.card.id).collect::<Vec<_>>(), *count, *count);
+                Some(Prompt::SelectBenchedPokemon {
+                    target_player_idx,
+                    count,
+                    ..
+                }) => {
+                    let player = game
+                        .players
+                        .get(*target_player_idx)
+                        .ok_or(ActionError::InvalidPrompt)?;
+                    return validate_targets(
+                        target_ids,
+                        &player
+                            .bench
+                            .iter()
+                            .map(|slot| slot.card.id)
+                            .collect::<Vec<_>>(),
+                        *count,
+                        *count,
+                    );
                 }
                 Some(Prompt::OpponentSelectsBenchedPokemon { player, .. }) => {
-                    let state = match player { crate::PlayerId::P1 => &game.players[0], crate::PlayerId::P2 => &game.players[1] };
-                    return validate_targets(target_ids, &state.bench.iter().map(|slot| slot.card.id).collect::<Vec<_>>(), 1, 1);
+                    let state = match player {
+                        crate::PlayerId::P1 => &game.players[0],
+                        crate::PlayerId::P2 => &game.players[1],
+                    };
+                    return validate_targets(
+                        target_ids,
+                        &state
+                            .bench
+                            .iter()
+                            .map(|slot| slot.card.id)
+                            .collect::<Vec<_>>(),
+                        1,
+                        1,
+                    );
                 }
                 _ => {}
             }
             let prompt = game.pending_prompt.as_ref().map(|p| &p.prompt);
             let (options, min, max) = match prompt {
-                Some(Prompt::ChoosePokemonInPlay { options, min, max, .. }) => {
-                    (options.as_slice(), *min, *max)
-                }
+                Some(Prompt::ChoosePokemonInPlay {
+                    options, min, max, ..
+                }) => (options.as_slice(), *min, *max),
                 Some(Prompt::ChoosePokemonTargets {
                     valid_targets,
                     min,
@@ -737,20 +893,38 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             if game.pending_prompt.is_none() {
                 return Err(ActionError::InvalidPrompt);
             }
-            let (player, count, options, min, max, return_to_deck) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                Some(Prompt::ChooseCardsFromHand {
-                    player,
-                    count,
-                    options,
-                    min,
-                    max,
-                    return_to_deck,
-                    ..
-                }) => (*player, *count, options, min, max, *return_to_deck),
-                Some(Prompt::DiscardForDrawEffect { player, count, options, .. }) => (*player, (*count).min(options.len()), options, &None, &None, false),
-                Some(Prompt::OptionalDiscardForEffect { player, options, .. }) => (*player, 1, options, &Some(0), &Some(1), false),
-                _ => return Err(ActionError::InvalidPrompt),
-            };
+            let (player, count, options, min, max, return_to_deck) =
+                match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+                    Some(Prompt::ChooseCardsFromHand {
+                        player,
+                        count,
+                        options,
+                        min,
+                        max,
+                        return_to_deck,
+                        ..
+                    }) => (*player, *count, options, min, max, *return_to_deck),
+                    Some(Prompt::DiscardForDrawEffect {
+                        player,
+                        count,
+                        options,
+                        ..
+                    }) => (
+                        *player,
+                        (*count).min(options.len()),
+                        options,
+                        &None,
+                        &None,
+                        false,
+                    ),
+                    Some(Prompt::OptionalDiscardForEffect {
+                        player, options, ..
+                    }) => (*player, 1, options, &Some(0), &Some(1), false),
+                    Some(Prompt::ChooseCardFromHand { player, options }) => {
+                        (*player, 1, options, &Some(1), &Some(1), false)
+                    }
+                    _ => return Err(ActionError::InvalidPrompt),
+                };
             if return_to_deck {
                 return Err(ActionError::InvalidPrompt);
             }
@@ -784,18 +958,19 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             if game.pending_prompt.is_none() {
                 return Err(ActionError::InvalidPrompt);
             }
-            let (player, count, options, min, max, return_to_deck) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                Some(Prompt::ChooseCardsFromHand {
-                    player,
-                    count,
-                    options,
-                    min,
-                    max,
-                    return_to_deck,
-                    ..
-                }) => (*player, *count, options, min, max, *return_to_deck),
-                _ => return Err(ActionError::InvalidPrompt),
-            };
+            let (player, count, options, min, max, return_to_deck) =
+                match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+                    Some(Prompt::ChooseCardsFromHand {
+                        player,
+                        count,
+                        options,
+                        min,
+                        max,
+                        return_to_deck,
+                        ..
+                    }) => (*player, *count, options, min, max, *return_to_deck),
+                    _ => return Err(ActionError::InvalidPrompt),
+                };
             if !return_to_deck {
                 return Err(ActionError::InvalidPrompt);
             }
@@ -829,7 +1004,8 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             if game.pending_prompt.is_none() {
                 return Err(ActionError::InvalidPrompt);
             }
-            let (player, options, min, max) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+            let (player, options, min, max) = match game.pending_prompt.as_ref().map(|p| &p.prompt)
+            {
                 Some(Prompt::ChooseCardsInPlay {
                     player,
                     options,
@@ -850,7 +1026,8 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             Ok(())
         }
         Action::ChoosePrizeCards { card_ids } => {
-            let (player, options, min, max) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+            let (player, options, min, max) = match game.pending_prompt.as_ref().map(|p| &p.prompt)
+            {
                 Some(Prompt::ChoosePrizeCards {
                     player,
                     options,
@@ -875,7 +1052,9 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             _ => Err(ActionError::InvalidPrompt),
         },
         Action::ChooseNumber { number } => match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-            Some(Prompt::ChooseNumber { min, max, .. } | Prompt::ChooseDrawCount { min, max, .. }) if number >= min && number <= max => Ok(()),
+            Some(
+                Prompt::ChooseNumber { min, max, .. } | Prompt::ChooseDrawCount { min, max, .. },
+            ) if number >= min && number <= max => Ok(()),
             _ => Err(ActionError::InvalidPrompt),
         },
         Action::CancelPrompt => {
@@ -884,21 +1063,23 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
                 Some(Prompt::ChooseAttachedEnergy { .. }) => {
                     // Allow cancelling ChooseAttachedEnergy prompts (e.g., from retreat)
                     Ok(())
-                },
+                }
                 Some(Prompt::ChooseCardsFromHand { .. }) => {
                     // Allow cancelling ChooseCardsFromHand prompts (abort the action that required card selection)
                     Ok(())
-                },
+                }
                 Some(Prompt::ChooseCardsFromDeck { .. }) => {
                     // Allow cancelling ChooseCardsFromDeck prompts (abort the action that required card selection)
                     Ok(())
-                },
+                }
                 _ => Err(ActionError::InvalidPhase),
             }
         }
         Action::ChooseDefenderAttack { attack_name } => {
             let (player, attacks) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                Some(Prompt::ChooseDefenderAttack { player, attacks, .. }) => (*player, attacks),
+                Some(Prompt::ChooseDefenderAttack {
+                    player, attacks, ..
+                }) => (*player, attacks),
                 _ => return Err(ActionError::InvalidPrompt),
             };
             if player != game.turn.player {
@@ -911,7 +1092,9 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
         }
         Action::ChoosePokemonAttack { attack_name } => {
             let (player, attacks) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                Some(Prompt::ChoosePokemonAttack { player, attacks, .. }) => (*player, attacks),
+                Some(Prompt::ChoosePokemonAttack {
+                    player, attacks, ..
+                }) => (*player, attacks),
                 _ => return Err(ActionError::InvalidPrompt),
             };
             if player != game.turn.player {
@@ -947,7 +1130,11 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
                         crate::PlayerId::P1 => 0,
                         crate::PlayerId::P2 => 1,
                     };
-                    if !game.players[player_index].bench.iter().any(|s| s.card.id == *card_id) {
+                    if !game.players[player_index]
+                        .bench
+                        .iter()
+                        .any(|s| s.card.id == *card_id)
+                    {
                         return Err(ActionError::TargetNotFound);
                     }
                     Ok(())
@@ -986,6 +1173,7 @@ fn action_matches_prompt(prompt: &Prompt, action: &Action) -> bool {
         (Prompt::ChooseAttachedEnergy { .. }, Action::ChooseAttachedEnergy { .. }) => true,
         (Prompt::OptionalDiscardAttachedEnergy { .. }, Action::ChooseAttachedEnergy { .. }) => true,
         (Prompt::ChooseCardsFromHand { .. }, Action::DiscardCardsFromHand { .. }) => true,
+        (Prompt::ChooseCardFromHand { .. }, Action::DiscardCardsFromHand { .. }) => true,
         (Prompt::DiscardForDrawEffect { .. }, Action::DiscardCardsFromHand { .. }) => true,
         (Prompt::OptionalDiscardForEffect { .. }, Action::DiscardCardsFromHand { .. }) => true,
         (Prompt::ChooseCardsFromHand { .. }, Action::ReturnCardsFromHandToDeck { .. }) => true,
@@ -997,7 +1185,10 @@ fn action_matches_prompt(prompt: &Prompt, action: &Action) -> bool {
         (Prompt::ChooseNewActive { .. }, Action::ChooseNewActive { .. }) => true,
         (Prompt::CoinFlipForEffect { .. }, Action::ConfirmPrompt) => true,
         (Prompt::RevealCards { .. }, Action::ConfirmPrompt) => true,
-        (Prompt::ChooseNumber { .. } | Prompt::ChooseDrawCount { .. }, Action::ChooseNumber { .. }) => true,
+        (
+            Prompt::ChooseNumber { .. } | Prompt::ChooseDrawCount { .. },
+            Action::ChooseNumber { .. },
+        ) => true,
         (_, Action::Concede) => true,
         _ => false,
     }
@@ -1013,7 +1204,11 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
     can_execute(game, &action)?;
     match action {
         Action::ConfirmPrompt => {
-            if let Some(Prompt::CoinFlipForEffect { player, .. }) = game.pending_prompt.as_ref().map(|p| &p.prompt) { game.flip_coin_for(*player); }
+            if let Some(Prompt::CoinFlipForEffect { player, .. }) =
+                game.pending_prompt.as_ref().map(|p| &p.prompt)
+            {
+                game.flip_coin_for(*player);
+            }
             Ok(Vec::new())
         }
         Action::ChooseNumber { number } => {
@@ -1193,7 +1388,10 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
             add_turn_marker(game, new_id, "EvolvedThisTurn");
             Ok(Vec::new())
         }
-        Action::AttachEnergy { energy_id, target_id } => {
+        Action::AttachEnergy {
+            energy_id,
+            target_id,
+        } => {
             let energy = game
                 .current_player_mut()
                 .hand
@@ -1285,26 +1483,29 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     game.current_player_mut().played_supporter_this_turn = true;
                 }
             }
+            game.pending_trainer = Some(trainer);
             if let Some(effect_value) = meta.and_then(|data| data.trainer_effect) {
-                let effect_ast: crate::EffectAst =
-                    serde_json::from_value(effect_value).map_err(|_| ActionError::InvalidCardType)?;
+                let effect_ast: crate::EffectAst = serde_json::from_value(effect_value)
+                    .map_err(|_| ActionError::InvalidCardType)?;
                 let outcome = crate::execute_effect_with_source(game, &effect_ast, Some(card_id))
                     .unwrap_or(crate::EffectOutcome::Applied);
-                // If the effect created a prompt, store the trainer and wait for resolution
                 if matches!(outcome, crate::EffectOutcome::Prompt(_)) {
-                    game.pending_trainer = Some(trainer);
                     return Ok(Vec::new());
                 }
             }
-            // No prompt needed, discard immediately
             let owner_index = match owner {
                 crate::PlayerId::P1 => 0,
                 crate::PlayerId::P2 => 1,
             };
-            game.players[owner_index].discard.add(trainer);
+            if let Some(trainer) = game.pending_trainer.take() {
+                game.players[owner_index].discard.add(trainer);
+            }
             Ok(Vec::new())
         }
-        Action::UsePower { source_id, power_name } => {
+        Action::UsePower {
+            source_id,
+            power_name,
+        } => {
             game.mark_power_used(source_id, &power_name);
             let _ = crate::execute_custom_power(game, &power_name, source_id);
             game.emit_trigger(crate::TriggerEvent::OnPowerActivated {
@@ -1327,7 +1528,10 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     .active
                     .as_ref()
                     .ok_or(ActionError::InvalidPhase)?;
-                (attacker.card.id, attacker.has_special_condition(SpecialCondition::Confused))
+                (
+                    attacker.card.id,
+                    attacker.has_special_condition(SpecialCondition::Confused),
+                )
             };
 
             // If attack name is empty, we need to determine which attack to use
@@ -1345,7 +1549,12 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                 // If only one attack is usable, use it directly
                 if usable_attacks.len() == 1 {
                     let single_attack = usable_attacks[0].clone();
-                    return crate::execute(game, Action::DeclareAttack { attack: single_attack });
+                    return crate::execute(
+                        game,
+                        Action::DeclareAttack {
+                            attack: single_attack,
+                        },
+                    );
                 }
 
                 // Multiple usable attacks - check if we have a pending prompt
@@ -1392,9 +1601,8 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     let self_damage_counters = game.rules.confusion_self_damage_counters() as u16;
                     let self_damage = self_damage_counters * 10;
                     if let Some(active) = game.current_player_mut().active.as_mut() {
-                        active.damage_counters = active
-                            .damage_counters
-                            .saturating_add(self_damage_counters);
+                        active.damage_counters =
+                            active.damage_counters.saturating_add(self_damage_counters);
                     }
                     let mut events = vec![
                         GameEvent::AttackDeclared {
@@ -1464,10 +1672,34 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     }
                 }
             }
+            let prompt_version = game.pending_prompt_version;
+            if crate::before_damage(game, &attack, attacker_id, defender_id)
+                && game.pending_prompt_version != prompt_version
+            {
+                let event = GameEvent::AttackDeclared {
+                    player: game.turn.player,
+                    pokemon_id: attacker_id,
+                    attack: attack.name.clone(),
+                };
+                game.emit_trigger(crate::TriggerEvent::OnAttackDeclared {
+                    player: game.turn.player,
+                    attacker_id,
+                    attack: attack.clone(),
+                });
+                game.pending_attack = Some(crate::game::PendingAttack::PreDamage {
+                    attacker_id,
+                    defender_id,
+                    attack: attack.clone(),
+                });
+                return Ok(vec![event]);
+            }
             let mut attack_override = attack.clone();
             attack_override.attack_type = game.attack_type_for(attacker_id, &attack_override);
-            let overrides =
+            let mut overrides =
                 crate::apply_attack_overrides(game, &attack_override, attacker_id, defender_id);
+            if overrides.ignore_defender_effects {
+                overrides.prevent_damage = false;
+            }
             if !overrides.prevent_damage && overrides.damage_modifier != 0 {
                 game.add_damage_modifier(overrides.damage_modifier);
             }
@@ -1508,10 +1740,12 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                 game.peek_attack_damage_modifier(attacker_id, defender_id),
             );
             let manual_damage = match attack_override.effect_ast.as_ref() {
-                Some(crate::EffectAst::DealDamageNoModifiers { amount, .. }) => Some(*amount as u16),
-                Some(crate::EffectAst::DealDamageNoModifiersWithOverkillRecoil { amount, .. }) => {
+                Some(crate::EffectAst::DealDamageNoModifiers { amount, .. }) => {
                     Some(*amount as u16)
                 }
+                Some(crate::EffectAst::DealDamageNoModifiersWithOverkillRecoil {
+                    amount, ..
+                }) => Some(*amount as u16),
                 _ => None,
             };
             if let Some(amount) = manual_damage {
@@ -1537,10 +1771,11 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                         (weakness, resistance)
                     };
                     if manual_damage.is_none() {
-                        let result = execute_attack(game, &attack_override).map_err(|err| match err {
-                            CombatError::InsufficientEnergy => ActionError::InsufficientEnergy,
-                            _ => ActionError::InvalidPhase,
-                        });
+                        let result =
+                            execute_attack(game, &attack_override).map_err(|err| match err {
+                                CombatError::InsufficientEnergy => ActionError::InsufficientEnergy,
+                                _ => ActionError::InvalidPhase,
+                            });
                         if let Some(defender_slot) = game.opponent_player_mut().active.as_mut() {
                             defender_slot.weakness = original_weakness;
                             defender_slot.resistance = original_resistance;
@@ -1576,13 +1811,11 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     );
                 }
             }
-            let mut events = vec![
-                GameEvent::AttackDeclared {
-                    player: game.turn.player,
-                    pokemon_id: attacker_id,
-                    attack: attack.name.clone(),
-                },
-            ];
+            let mut events = vec![GameEvent::AttackDeclared {
+                player: game.turn.player,
+                pokemon_id: attacker_id,
+                attack: attack.name.clone(),
+            }];
             game.emit_trigger(crate::TriggerEvent::OnAttackDeclared {
                 player: game.turn.player,
                 attacker_id,
@@ -1674,7 +1907,11 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                 //    without leaving pending state behind (which can mark the game unhealthy).
 
                 // Optional move-energy: treat cancel as "choose none" if allowed.
-                if game.pending_move_energy.as_ref().is_some_and(|pending| pending.min == 0) {
+                if game
+                    .pending_move_energy
+                    .as_ref()
+                    .is_some_and(|pending| pending.min == 0)
+                {
                     game.pending_prompt = None;
                     let _ = game.pending_move_energy.take();
                     resolve_pending_effect(game)?;
@@ -1732,7 +1969,12 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     .current_player()
                     .active
                     .as_ref()
-                    .map(|slot| slot.attached_energy.iter().map(|energy| energy.id).collect())
+                    .map(|slot| {
+                        slot.attached_energy
+                            .iter()
+                            .map(|energy| energy.id)
+                            .collect()
+                    })
                     .unwrap_or_default(),
                 destination: SelectionDestination::default(),
             };
@@ -1741,19 +1983,41 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
             Ok(Vec::new())
         }
         Action::ChooseAttachedEnergy { energy_ids } => {
-            if let Some(Prompt::OptionalDiscardAttachedEnergy { player, source_id, .. }) = game.pending_prompt.as_ref().map(|p| &p.prompt).cloned() {
-                let idx = match player { crate::PlayerId::P1 => 0, crate::PlayerId::P2 => 1 };
+            if let Some(Prompt::OptionalDiscardAttachedEnergy {
+                player, source_id, ..
+            }) = game.pending_prompt.as_ref().map(|p| &p.prompt).cloned()
+            {
+                let idx = match player {
+                    crate::PlayerId::P1 => 0,
+                    crate::PlayerId::P2 => 1,
+                };
                 if let Some(slot) = game.players[idx].find_pokemon_mut(source_id) {
                     let mut discarded = Vec::new();
-                    slot.attached_energy.retain(|energy| { if energy_ids.contains(&energy.id) { discarded.push(energy.clone()); false } else { true } });
-                    for energy in discarded { game.players[idx].discard.add(energy); }
+                    slot.attached_energy.retain(|energy| {
+                        if energy_ids.contains(&energy.id) {
+                            discarded.push(energy.clone());
+                            false
+                        } else {
+                            true
+                        }
+                    });
+                    for energy in discarded {
+                        game.players[idx].discard.add(energy);
+                    }
                 }
                 return Ok(Vec::new());
             }
-            let (player, pokemon_id, count, prompt_min) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                Some(Prompt::ChooseAttachedEnergy { player, pokemon_id, count, min, .. }) => (*player, *pokemon_id, *count, min.unwrap_or(*count)),
-                _ => return Err(ActionError::InvalidPrompt),
-            };
+            let (player, pokemon_id, count, prompt_min) =
+                match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+                    Some(Prompt::ChooseAttachedEnergy {
+                        player,
+                        pokemon_id,
+                        count,
+                        min,
+                        ..
+                    }) => (*player, *pokemon_id, *count, min.unwrap_or(*count)),
+                    _ => return Err(ActionError::InvalidPrompt),
+                };
             let _ = prompt_min; // Used in validation
             let is_custom_prompt = game.pending_custom_effect_id.is_some()
                 && game.pending_move_energy.is_none()
@@ -1775,7 +2039,11 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     .find_pokemon(pokemon_id)
                     .ok_or(ActionError::TargetNotFound)?;
                 for energy_id in &energy_ids {
-                    if !slot.attached_energy.iter().any(|energy| energy.id == *energy_id) {
+                    if !slot
+                        .attached_energy
+                        .iter()
+                        .any(|energy| energy.id == *energy_id)
+                    {
                         return Err(ActionError::TargetNotFound);
                     }
                 }
@@ -1841,7 +2109,9 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     .active
                     .iter()
                     .chain(game.players[player_index].bench.iter())
-                    .filter(|s| s.card.id != pokemon_id && updated_pending.target_selector.matches(game, s))
+                    .filter(|s| {
+                        s.card.id != pokemon_id && updated_pending.target_selector.matches(game, s)
+                    })
                     .map(|s| s.card.id)
                     .collect();
 
@@ -1950,7 +2220,9 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                 match destination {
                     SelectionDestination::Hand => game.players[player_index].hand.add(card),
                     SelectionDestination::Discard => game.players[player_index].discard.add(card),
-                    SelectionDestination::DeckTop => game.players[player_index].deck.add_to_top(card),
+                    SelectionDestination::DeckTop => {
+                        game.players[player_index].deck.add_to_top(card)
+                    }
                     SelectionDestination::DeckBottom => {
                         game.players[player_index].deck.add_to_bottom(card);
                     }
@@ -2088,7 +2360,9 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                 match destination {
                     SelectionDestination::Hand => game.players[player_index].hand.add(card),
                     SelectionDestination::Discard => game.players[player_index].discard.add(card),
-                    SelectionDestination::DeckTop => game.players[player_index].deck.add_to_top(card),
+                    SelectionDestination::DeckTop => {
+                        game.players[player_index].deck.add_to_top(card)
+                    }
                     SelectionDestination::DeckBottom => {
                         game.players[player_index].deck.add_to_bottom(card);
                     }
@@ -2129,9 +2403,18 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
         }
         Action::ChoosePokemonTargets { target_ids } => {
             let mut events = Vec::new();
-            let legacy = matches!(game.pending_prompt.as_ref().map(|p| &p.prompt), Some(Prompt::ChooseTargets { .. } | Prompt::SelectBenchedPokemon { .. } | Prompt::OpponentSelectsBenchedPokemon { .. }));
+            let legacy = matches!(
+                game.pending_prompt.as_ref().map(|p| &p.prompt),
+                Some(
+                    Prompt::ChooseTargets { .. }
+                        | Prompt::SelectBenchedPokemon { .. }
+                        | Prompt::OpponentSelectsBenchedPokemon { .. }
+                )
+            );
             game.pending_prompt = None;
-            if legacy { return Ok(events); }
+            if legacy {
+                return Ok(events);
+            }
             if let Some(pending) = game.pending_attach_from_discard.clone() {
                 if target_ids.len() != pending.selected_energy_ids.len() {
                     return Err(ActionError::InvalidPrompt);
@@ -2201,7 +2484,9 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
 
                 // Move energy from source to target
                 let mut energy_to_move = Vec::new();
-                if let Some(source_slot) = game.players[player_index].find_pokemon_mut(pending_move.source_id) {
+                if let Some(source_slot) =
+                    game.players[player_index].find_pokemon_mut(pending_move.source_id)
+                {
                     source_slot.attached_energy.retain(|e| {
                         if pending_move.selected_energy_ids.contains(&e.id) {
                             energy_to_move.push(e.clone());
@@ -2267,9 +2552,13 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                 _ => return Err(ActionError::InvalidPrompt),
             };
             if !game.reorder_top_of_deck(player, &card_ids) {
-                if !legacy { return Err(ActionError::InvalidPrompt); }
+                if !legacy {
+                    return Err(ActionError::InvalidPrompt);
+                }
             }
-            if legacy { return Ok(events); }
+            if legacy {
+                return Ok(events);
+            }
             resolve_pending_effect(game)?;
             finalize_pending_trainer(game);
             finalize_pending_attack(game, &mut events);
@@ -2277,25 +2566,31 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
         }
         Action::DiscardCardsFromHand { card_ids } => {
             let mut events = Vec::new();
-            let (target_player, legacy) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                Some(Prompt::ChooseCardsFromHand { player, .. }) => (*player, false),
-                Some(Prompt::DiscardForDrawEffect { player, .. }) => (*player, true),
-                Some(Prompt::OptionalDiscardForEffect { player, .. }) => (*player, true),
-                _ => return Err(ActionError::InvalidPrompt),
-            };
+            let (target_player, legacy, inspect_only) =
+                match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+                    Some(Prompt::ChooseCardsFromHand { player, .. }) => (*player, false, false),
+                    Some(Prompt::ChooseCardFromHand { player, .. }) => (*player, false, true),
+                    Some(Prompt::DiscardForDrawEffect { player, .. }) => (*player, true, false),
+                    Some(Prompt::OptionalDiscardForEffect { player, .. }) => (*player, true, false),
+                    _ => return Err(ActionError::InvalidPrompt),
+                };
             let discarded_ids = card_ids.clone();
-            let target = match target_player {
-                crate::PlayerId::P1 => &mut game.players[0],
-                crate::PlayerId::P2 => &mut game.players[1],
-            };
-            for card_id in card_ids {
-                if let Some(card) = target.hand.remove(card_id) {
-                    target.discard.add(card);
-                } else {
-                    return Err(ActionError::CardNotInHand);
+            if !inspect_only {
+                let target = match target_player {
+                    crate::PlayerId::P1 => &mut game.players[0],
+                    crate::PlayerId::P2 => &mut game.players[1],
+                };
+                for card_id in card_ids {
+                    if let Some(card) = target.hand.remove(card_id) {
+                        target.discard.add(card);
+                    } else {
+                        return Err(ActionError::CardNotInHand);
+                    }
                 }
             }
-            if legacy { return Ok(events); }
+            if legacy {
+                return Ok(events);
+            }
             game.pending_prompt = None;
             let custom_resolved = if let Some(effect_id) = game.pending_custom_effect_id.clone() {
                 let source_id = game.pending_custom_source_id;
@@ -2345,7 +2640,8 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
         }
         Action::ChooseCardsInPlay { card_ids } => {
             let mut events = Vec::new();
-            let (player, options, min, max) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+            let (player, options, min, max) = match game.pending_prompt.as_ref().map(|p| &p.prompt)
+            {
                 Some(Prompt::ChooseCardsInPlay {
                     player,
                     options,
@@ -2370,7 +2666,10 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                             crate::PlayerId::P1 => 0,
                             crate::PlayerId::P2 => 1,
                         };
-                        events.push(GameEvent::StadiumDiscarded { player: stadium.owner, stadium_id: stadium.id });
+                        events.push(GameEvent::StadiumDiscarded {
+                            player: stadium.owner,
+                            stadium_id: stadium.id,
+                        });
                         to_discard.push((owner_index, stadium));
                     }
                     continue;
@@ -2384,7 +2683,10 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                                     crate::PlayerId::P1 => 0,
                                     crate::PlayerId::P2 => 1,
                                 };
-                                events.push(GameEvent::ToolDiscarded { player: tool.owner, tool_id: tool.id });
+                                events.push(GameEvent::ToolDiscarded {
+                                    player: tool.owner,
+                                    tool_id: tool.id,
+                                });
                                 to_discard.push((owner_index, tool));
                             }
                             removed = true;
@@ -2398,7 +2700,10 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                                     crate::PlayerId::P1 => 0,
                                     crate::PlayerId::P2 => 1,
                                 };
-                                events.push(GameEvent::ToolDiscarded { player: tool.owner, tool_id: tool.id });
+                                events.push(GameEvent::ToolDiscarded {
+                                    player: tool.owner,
+                                    tool_id: tool.id,
+                                });
                                 to_discard.push((owner_index, tool));
                             }
                             removed = true;
@@ -2424,7 +2729,8 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
         }
         Action::ChoosePrizeCards { card_ids } => {
             let mut events = Vec::new();
-            let (player, options, min, max) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+            let (player, options, min, max) = match game.pending_prompt.as_ref().map(|p| &p.prompt)
+            {
                 Some(Prompt::ChoosePrizeCards {
                     player,
                     options,
@@ -2450,9 +2756,7 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
                     .revealed_prize_ids
                     .contains(card_id)
                 {
-                    game.players[player_index]
-                        .revealed_prize_ids
-                        .push(*card_id);
+                    game.players[player_index].revealed_prize_ids.push(*card_id);
                 }
             }
             game.reveal_cards(player, &card_ids);
@@ -2503,13 +2807,12 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
         }
         Action::ChoosePokemonAttack { attack_name } => {
             let mut events = Vec::new();
-            let (player, attacks) =
-                match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                    Some(Prompt::ChoosePokemonAttack { player, attacks, .. }) => {
-                        (*player, attacks.clone())
-                    }
-                    _ => return Err(ActionError::InvalidPrompt),
-                };
+            let (player, attacks) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+                Some(Prompt::ChoosePokemonAttack {
+                    player, attacks, ..
+                }) => (*player, attacks.clone()),
+                _ => return Err(ActionError::InvalidPrompt),
+            };
             if player != game.turn.player {
                 return Err(ActionError::WrongPlayer);
             }
@@ -2536,13 +2839,12 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
         }
         Action::ChooseSpecialCondition { condition } => {
             let mut events = Vec::new();
-            let (player, options) =
-                match game.pending_prompt.as_ref().map(|p| &p.prompt) {
-                    Some(Prompt::ChooseSpecialCondition { player, options }) => {
-                        (*player, options.clone())
-                    }
-                    _ => return Err(ActionError::InvalidPrompt),
-                };
+            let (player, options) = match game.pending_prompt.as_ref().map(|p| &p.prompt) {
+                Some(Prompt::ChooseSpecialCondition { player, options }) => {
+                    (*player, options.clone())
+                }
+                _ => return Err(ActionError::InvalidPrompt),
+            };
             if player != game.turn.player {
                 return Err(ActionError::WrongPlayer);
             }
@@ -2633,11 +2935,17 @@ fn perform_retreat(game: &mut GameState, to_bench_id: CardInstanceId) -> Result<
         .ok_or(ActionError::TargetNotFound)?;
     let next_active = game.current_player_mut().bench.remove(bench_pos);
     let mut outgoing = active;
+    let outgoing_id = outgoing.card.id;
+    let remaining_hp = outgoing
+        .hp
+        .saturating_sub(outgoing.damage_counters.saturating_mul(10));
     outgoing.clear_special_conditions();
     game.current_player_mut().bench.push(outgoing);
     game.current_player_mut().active = Some(next_active);
     game.current_player_mut().retreated_this_turn = true;
     game.pending_retreat_to = None;
+    crate::apply_tool_stadium_effects(game);
+    crate::after_retreat(game, game.turn.player, outgoing_id, remaining_hp);
     Ok(())
 }
 
@@ -2645,7 +2953,7 @@ fn resolve_attack_after_pre_damage(
     game: &mut GameState,
     attack: &Attack,
     attacker_id: CardInstanceId,
-    defender_id: CardInstanceId,
+    _defender_id: CardInstanceId,
     skip_post_damage_effect: bool,
     emit_attack_declared: bool,
 ) -> Result<Vec<GameEvent>, ActionError> {
@@ -2655,9 +2963,14 @@ fn resolve_attack_after_pre_damage(
         .as_ref()
         .ok_or(ActionError::InvalidPhase)?
         .clone();
+    let defender_id = defender.card.id;
     let mut attack_override = attack.clone();
     attack_override.attack_type = game.attack_type_for(attacker_id, &attack_override);
-    let overrides = crate::apply_attack_overrides(game, &attack_override, attacker_id, defender_id);
+    let mut overrides =
+        crate::apply_attack_overrides(game, &attack_override, attacker_id, defender_id);
+    if overrides.ignore_defender_effects {
+        overrides.prevent_damage = false;
+    }
     if !overrides.prevent_damage && overrides.damage_modifier != 0 {
         game.add_damage_modifier(overrides.damage_modifier);
     }
@@ -2934,9 +3247,8 @@ fn resolve_pending_effect(game: &mut GameState) -> Result<(), ActionError> {
     };
     let source_id = game.pending_effect_source_id;
     game.pending_effect_source_id = None;
-    let outcome =
-        crate::execute_effect_with_source(game, &effect_ast, source_id)
-            .unwrap_or(crate::EffectOutcome::Applied);
+    let outcome = crate::execute_effect_with_source(game, &effect_ast, source_id)
+        .unwrap_or(crate::EffectOutcome::Applied);
     if matches!(outcome, crate::EffectOutcome::Prompt(_))
         && game.pending_effect_ast.is_none()
         && !matches!(effect_ast, crate::EffectAst::Sequence { .. })
@@ -2969,8 +3281,8 @@ fn tool_discard_timing<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ids::{CardDefId, PlayerId};
     use crate::card_meta::CardMeta;
+    use crate::ids::{CardDefId, PlayerId};
     use crate::types::{Stage, Type};
     use crate::zone::CardInstance;
     use tcg_rules_ex::RulesetConfig;
@@ -3205,7 +3517,12 @@ mod tests {
         // Force a retreat cost of 1 by ensuring the active has a default retreat cost.
         // (The inferred/default meta uses retreat_cost: Some(1) for unknown Pokemon,
         // but our TEST-BASIC meta sets retreat_cost: Some(1) too.)
-        let result = game.apply_action(PlayerId::P1, Action::Retreat { to_bench_id: bench_id });
+        let result = game.apply_action(
+            PlayerId::P1,
+            Action::Retreat {
+                to_bench_id: bench_id,
+            },
+        );
         assert!(result.is_err());
         assert!(game.pending_prompt.is_none());
     }
@@ -3231,11 +3548,33 @@ mod tests {
         let energy = CardInstance::new(CardDefId::new("TEST-ENERGY"), PlayerId::P1);
         let energy_id = energy.id;
         game.current_player_mut().hand.add(energy);
-        assert!(execute(&mut game, Action::AttachEnergy { energy_id, target_id: active_id }).is_err());
+        assert!(execute(
+            &mut game,
+            Action::AttachEnergy {
+                energy_id,
+                target_id: active_id
+            }
+        )
+        .is_err());
         assert!(game.current_player().hand.contains(energy_id));
         game.set_hooks(crate::runtime_hooks::RuntimeHooks::empty());
-        execute(&mut game, Action::AttachEnergy { energy_id, target_id: active_id }).unwrap();
-        assert_eq!(game.current_player().active.as_ref().unwrap().attached_energy.len(), 1);
+        execute(
+            &mut game,
+            Action::AttachEnergy {
+                energy_id,
+                target_id: active_id,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            game.current_player()
+                .active
+                .as_ref()
+                .unwrap()
+                .attached_energy
+                .len(),
+            1
+        );
     }
 
     #[test]
@@ -3245,22 +3584,39 @@ mod tests {
         game.turn.player = PlayerId::P1;
         let active_id = put_active(&mut game, PlayerId::P1, "TEST-BASIC");
         let energy = CardInstance::new(CardDefId::new("TEST-ENERGY"), PlayerId::P1);
-        game.players[0].active.as_mut().unwrap().attached_energy.push(energy);
+        game.players[0]
+            .active
+            .as_mut()
+            .unwrap()
+            .attached_energy
+            .push(energy);
         let attack = crate::Attack {
             name: "Two".into(),
             damage: 10,
             attack_type: Type::Colorless,
-            cost: crate::AttackCost { total_energy: 2, types: vec![Type::Colorless, Type::Colorless] },
+            cost: crate::AttackCost {
+                total_energy: 2,
+                types: vec![Type::Colorless, Type::Colorless],
+            },
             effect_ast: None,
         };
-        assert!(!game.attack_cost_met(active_id, &attack), "one plain energy is one unit");
+        assert!(
+            !game.attack_cost_met(active_id, &attack),
+            "one plain energy is one unit"
+        );
         let mut hooks = crate::runtime_hooks::RuntimeHooks::empty();
         hooks.is_double_rainbow = |id| id.as_str() == "TEST-ENERGY";
         game.set_hooks(hooks);
-        assert!(game.attack_cost_met(active_id, &attack), "flagged energy counts 2 units");
+        assert!(
+            game.attack_cost_met(active_id, &attack),
+            "flagged energy counts 2 units"
+        );
         hooks.energy_units_override = |_, _, _, units| units.min(1);
         game.set_hooks(hooks);
-        assert!(!game.attack_cost_met(active_id, &attack), "override applies after the 2-unit rule");
+        assert!(
+            !game.attack_cost_met(active_id, &attack),
+            "override applies after the 2-unit rule"
+        );
     }
 
     #[test]
@@ -3277,7 +3633,14 @@ mod tests {
             true
         };
         game.set_hooks(hooks);
-        let events = execute(&mut game, Action::UsePower { source_id, power_name: "Test Power".into() }).unwrap();
+        let events = execute(
+            &mut game,
+            Action::UsePower {
+                source_id,
+                power_name: "Test Power".into(),
+            },
+        )
+        .unwrap();
         assert!(
             events.iter().any(|e| matches!(e, GameEvent::PokemonKnockedOut { pokemon_id } if *pokemon_id == target_id)),
             "power damage must knock out without waiting for an attack: {events:?}"
@@ -3292,11 +3655,24 @@ mod tests {
         let _ = put_active(&mut game, PlayerId::P1, "TEST-BASIC");
         let defender_id = put_active(&mut game, PlayerId::P2, "TEST-BASIC");
         game.set_pending_prompt(
-            Prompt::ChooseDefenderAttack { player: PlayerId::P1, defender_id, attacks: vec!["Scratch".into()] },
+            Prompt::ChooseDefenderAttack {
+                player: PlayerId::P1,
+                defender_id,
+                attacks: vec!["Scratch".into()],
+            },
             PlayerId::P1,
         );
-        execute(&mut game, Action::ChooseDefenderAttack { attack_name: "Scratch".into() }).unwrap();
-        assert!(game.pending_prompt.is_none(), "resolved prompt must not linger and block later attacks");
+        execute(
+            &mut game,
+            Action::ChooseDefenderAttack {
+                attack_name: "Scratch".into(),
+            },
+        )
+        .unwrap();
+        assert!(
+            game.pending_prompt.is_none(),
+            "resolved prompt must not linger and block later attacks"
+        );
         assert!(game.has_marker(defender_id, "Amnesia:Scratch"));
     }
 
@@ -3311,7 +3687,8 @@ mod tests {
             },
             PlayerId::P1,
         );
-        game.apply_action(PlayerId::P1, Action::ConfirmPrompt).unwrap();
+        game.apply_action(PlayerId::P1, Action::ConfirmPrompt)
+            .unwrap();
         assert!(game.pending_prompt.is_none());
 
         game.set_pending_prompt(
@@ -3343,7 +3720,9 @@ mod tests {
                     options: vec![id],
                     effect_description: String::new(),
                 },
-                Action::ChoosePokemonTargets { target_ids: vec![id] },
+                Action::ChoosePokemonTargets {
+                    target_ids: vec![id],
+                },
             ),
             (
                 Prompt::ReorderCards {
@@ -3362,7 +3741,9 @@ mod tests {
                     follow_up_search_zone: String::new(),
                     attach_to: id,
                 },
-                Action::ChooseAttachedEnergy { energy_ids: Vec::new() },
+                Action::ChooseAttachedEnergy {
+                    energy_ids: Vec::new(),
+                },
             ),
             (
                 Prompt::OptionalDiscardForEffect {
@@ -3372,7 +3753,9 @@ mod tests {
                     follow_up_targets: Vec::new(),
                     damage_amount: 10,
                 },
-                Action::DiscardCardsFromHand { card_ids: Vec::new() },
+                Action::DiscardCardsFromHand {
+                    card_ids: Vec::new(),
+                },
             ),
             (
                 Prompt::CoinFlipForEffect {
@@ -3391,7 +3774,10 @@ mod tests {
             ),
         ];
         for (prompt, action) in prompts_and_actions {
-            assert!(action_matches_prompt(&prompt, &action), "{prompt:?} vs {action:?}");
+            assert!(
+                action_matches_prompt(&prompt, &action),
+                "{prompt:?} vs {action:?}"
+            );
         }
     }
 }

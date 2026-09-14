@@ -183,7 +183,9 @@ pub fn attack_overrides(
     if holon_legacy_in_play(game) && game.pokemon_is_delta(defender_id) {
         overrides.ignore_weakness = true;
     }
-    if !defender.is_ex && has_holon_energy(game, defender, 84) && has_basic_energy_type(game, defender, Type::Fire)
+    if !defender.is_ex
+        && has_holon_energy(game, defender, 84)
+        && has_basic_energy_type(game, defender, Type::Fire)
     {
         overrides.ignore_weakness = true;
     }
@@ -340,11 +342,11 @@ fn attached_slot_for_energy(game: &GameState, energy_id: CardInstanceId) -> Opti
                 return Some(active);
             }
         }
-        if let Some(slot) = player
-            .bench
-            .iter()
-            .find(|slot| slot.attached_energy.iter().any(|energy| energy.id == energy_id))
-        {
+        if let Some(slot) = player.bench.iter().find(|slot| {
+            slot.attached_energy
+                .iter()
+                .any(|energy| energy.id == energy_id)
+        }) {
             return Some(slot);
         }
     }
@@ -365,7 +367,11 @@ fn all_energy_types() -> Vec<Type> {
     ]
 }
 
-fn discard_attached_energy(game: &mut GameState, target_id: CardInstanceId, energy_id: CardInstanceId) {
+fn discard_attached_energy(
+    game: &mut GameState,
+    target_id: CardInstanceId,
+    energy_id: CardInstanceId,
+) {
     let owner = match crate::df::helpers::owner_for_source(game, target_id) {
         Some(player) => player,
         None => return,
@@ -378,7 +384,11 @@ fn discard_attached_energy(game: &mut GameState, target_id: CardInstanceId, ener
         Some(slot) => slot,
         None => return,
     };
-    if let Some(index) = slot.attached_energy.iter().position(|energy| energy.id == energy_id) {
+    if let Some(index) = slot
+        .attached_energy
+        .iter()
+        .position(|energy| energy.id == energy_id)
+    {
         let energy = slot.attached_energy.remove(index);
         game.players[owner_index].discard.add(energy);
     }

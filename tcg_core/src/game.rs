@@ -3,33 +3,28 @@ use rand_chacha::ChaCha8Rng;
 use tcg_rules_ex::{Phase, RulesetConfig, SpecialCondition, WinCondition};
 
 use crate::card_meta::CardMetaMap;
+use crate::custom_abilities::register_card_triggers;
 use crate::event::GameEvent;
 use crate::ids::PlayerId;
+use crate::modifiers::{
+    resolve_damage_modifiers, resolve_stat_amount, DamageModifierEntry, StackingRule,
+    StatModifierEntry, StatModifierKind, StatModifierValue,
+};
+use crate::player::{PlayerState, PokemonSlot};
 use crate::power_locks::{PowerLock, PowerLockKind};
 use crate::prompt::{Prompt, SelectionDestination};
-use crate::triggers::{TriggerBus, TriggerEvent, TriggerSubscription, TriggeredEffect};
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::collections::BTreeMap;
-use crate::view::{GameView, PokemonView};
-use crate::view::ActionHints;
-use crate::modifiers::{
-    DamageModifierEntry,
-    StackingRule,
-    StatModifierEntry,
-    StatModifierKind,
-    StatModifierValue,
-    resolve_damage_modifiers,
-    resolve_stat_amount,
-};
-use crate::selectors::{CardSelector, PokemonSelector};
-use crate::{Action, ActionError, Attack};
-use serde_json::Value;
-use crate::player::{PlayerState, PokemonSlot};
-use crate::zone::{CardInstance, Zone, ZoneKind, ZoneRef};
-use crate::custom_abilities::register_card_triggers;
 use crate::restrictions::{Restriction, RestrictionKind};
 use crate::runtime_hooks::RuntimeHooks;
+use crate::selectors::{CardSelector, PokemonSelector};
+use crate::triggers::{TriggerBus, TriggerEvent, TriggerSubscription, TriggeredEffect};
+use crate::view::ActionHints;
+use crate::view::{GameView, PokemonView};
+use crate::zone::{CardInstance, Zone, ZoneKind, ZoneRef};
+use crate::{Action, ActionError, Attack};
+use serde_json::Value;
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Turn {
@@ -40,9 +35,16 @@ pub struct Turn {
 
 #[derive(Debug, Clone)]
 pub enum StepResult {
-    Prompt { prompt: Prompt, for_player: PlayerId },
-    Event { event: GameEvent },
-    GameOver { winner: PlayerId },
+    Prompt {
+        prompt: Prompt,
+        for_player: PlayerId,
+    },
+    Event {
+        event: GameEvent,
+    },
+    GameOver {
+        winner: PlayerId,
+    },
     Continue,
 }
 
@@ -284,11 +286,7 @@ impl GameState {
     fn collect_invariant_violations(&self) -> Vec<String> {
         let mut violations = Vec::new();
         for (idx, player) in self.players.iter().enumerate() {
-            let player_id = if idx == 0 {
-                PlayerId::P1
-            } else {
-                PlayerId::P2
-            };
+            let player_id = if idx == 0 { PlayerId::P1 } else { PlayerId::P2 };
             let mut allow_missing_active = false;
             if let Some(pending) = self.pending_prompt.as_ref() {
                 if pending.for_player == player_id {
@@ -388,10 +386,7 @@ impl GameState {
                 }
             };
             if !meta.is_tool {
-                violations.push(format!(
-                    "Non-tool card attached as tool: {}",
-                    tool.def_id
-                ));
+                violations.push(format!("Non-tool card attached as tool: {}", tool.def_id));
             }
         }
     }
@@ -449,9 +444,7 @@ impl GameState {
                     if self.rules.supporter_limit_per_turn() == 0 {
                         return None;
                     }
-                    if self.rules.supporter_limit_per_turn() <= 1
-                        && me.played_supporter_this_turn
-                    {
+                    if self.rules.supporter_limit_per_turn() <= 1 && me.played_supporter_this_turn {
                         return None;
                     }
                 }
@@ -469,8 +462,10 @@ impl GameState {
             .chain(me.bench.iter().map(|slot| slot.card.id))
             .collect();
         let mut playable_evolution_ids: Vec<crate::CardInstanceId> = Vec::new();
-        let mut evolve_targets_by_card_id: BTreeMap<crate::CardInstanceId, Vec<crate::CardInstanceId>> =
-            BTreeMap::new();
+        let mut evolve_targets_by_card_id: BTreeMap<
+            crate::CardInstanceId,
+            Vec<crate::CardInstanceId>,
+        > = BTreeMap::new();
         for card in me.hand.cards().iter() {
             let meta = match self.get_card_meta(&card.def_id) {
                 Some(meta) => meta,
@@ -521,7 +516,13 @@ impl GameState {
                 },
                 effect_ast: None,
             };
-            crate::can_execute(self, &Action::DeclareAttack { attack: dummy_attack }).is_ok()
+            crate::can_execute(
+                self,
+                &Action::DeclareAttack {
+                    attack: dummy_attack,
+                },
+            )
+            .is_ok()
         };
 
         ActionHints {
@@ -690,10 +691,7 @@ impl GameState {
             if missing_card_types.len() <= 10 {
                 // If few unique types, list them all
                 for def_id in &missing_card_types {
-                    eprintln!(
-                        "[WARN] Card {} has no card_meta entry",
-                        def_id
-                    );
+                    eprintln!("[WARN] Card {} has no card_meta entry", def_id);
                 }
             }
             eprintln!(
@@ -731,7 +729,10 @@ impl GameState {
         }
     }
 
-    pub fn find_pokemon(&self, target_id: crate::ids::CardInstanceId) -> Option<&crate::player::PokemonSlot> {
+    pub fn find_pokemon(
+        &self,
+        target_id: crate::ids::CardInstanceId,
+    ) -> Option<&crate::player::PokemonSlot> {
         for player in &self.players {
             if let Some(slot) = player.find_pokemon(target_id) {
                 return Some(slot);
@@ -740,7 +741,10 @@ impl GameState {
         None
     }
 
-    pub fn find_pokemon_mut(&mut self, target_id: crate::ids::CardInstanceId) -> Option<&mut crate::player::PokemonSlot> {
+    pub fn find_pokemon_mut(
+        &mut self,
+        target_id: crate::ids::CardInstanceId,
+    ) -> Option<&mut crate::player::PokemonSlot> {
         for player in &mut self.players {
             if let Some(slot) = player.find_pokemon_mut(target_id) {
                 return Some(slot);
@@ -754,28 +758,75 @@ impl GameState {
     }
 
     /// Search all zones (hand, deck, discard, prizes, active, bench, attached) for a card by ID.
-    pub fn find_card(&self, card_id: crate::ids::CardInstanceId) -> Option<&crate::zone::CardInstance> {
+    pub fn find_card(
+        &self,
+        card_id: crate::ids::CardInstanceId,
+    ) -> Option<&crate::zone::CardInstance> {
         for player in &self.players {
             // Check zones
-            if let Some(c) = player.hand.get(card_id) { return Some(c); }
-            if let Some(c) = player.deck.get(card_id) { return Some(c); }
-            if let Some(c) = player.discard.get(card_id) { return Some(c); }
-            if let Some(c) = player.prizes.get(card_id) { return Some(c); }
+            if let Some(c) = player.hand.get(card_id) {
+                return Some(c);
+            }
+            if let Some(c) = player.deck.get(card_id) {
+                return Some(c);
+            }
+            if let Some(c) = player.discard.get(card_id) {
+                return Some(c);
+            }
+            if let Some(c) = player.prizes.get(card_id) {
+                return Some(c);
+            }
             // Check active pokemon and attached cards
             if let Some(slot) = &player.active {
-                if slot.card.id == card_id { return Some(&slot.card); }
-                for e in &slot.attached_energy { if e.id == card_id { return Some(e); } }
-                for t in &slot.attached { if t.id == card_id { return Some(t); } }
-                if let Some(tool) = &slot.attached_tool { if tool.id == card_id { return Some(tool); } }
-                for e in &slot.evolution_stack { if e.id == card_id { return Some(e); } }
+                if slot.card.id == card_id {
+                    return Some(&slot.card);
+                }
+                for e in &slot.attached_energy {
+                    if e.id == card_id {
+                        return Some(e);
+                    }
+                }
+                for t in &slot.attached {
+                    if t.id == card_id {
+                        return Some(t);
+                    }
+                }
+                if let Some(tool) = &slot.attached_tool {
+                    if tool.id == card_id {
+                        return Some(tool);
+                    }
+                }
+                for e in &slot.evolution_stack {
+                    if e.id == card_id {
+                        return Some(e);
+                    }
+                }
             }
             // Check bench
             for slot in &player.bench {
-                if slot.card.id == card_id { return Some(&slot.card); }
-                for e in &slot.attached_energy { if e.id == card_id { return Some(e); } }
-                for t in &slot.attached { if t.id == card_id { return Some(t); } }
-                if let Some(tool) = &slot.attached_tool { if tool.id == card_id { return Some(tool); } }
-                for e in &slot.evolution_stack { if e.id == card_id { return Some(e); } }
+                if slot.card.id == card_id {
+                    return Some(&slot.card);
+                }
+                for e in &slot.attached_energy {
+                    if e.id == card_id {
+                        return Some(e);
+                    }
+                }
+                for t in &slot.attached {
+                    if t.id == card_id {
+                        return Some(t);
+                    }
+                }
+                if let Some(tool) = &slot.attached_tool {
+                    if tool.id == card_id {
+                        return Some(tool);
+                    }
+                }
+                for e in &slot.evolution_stack {
+                    if e.id == card_id {
+                        return Some(e);
+                    }
+                }
             }
         }
         None
@@ -802,17 +853,26 @@ impl GameState {
     }
 
     /// Alias for find_pokemon - search both players for a pokemon slot.
-    pub fn find_pokemon_slot(&self, pokemon_id: crate::ids::CardInstanceId) -> Option<&crate::player::PokemonSlot> {
+    pub fn find_pokemon_slot(
+        &self,
+        pokemon_id: crate::ids::CardInstanceId,
+    ) -> Option<&crate::player::PokemonSlot> {
         self.find_pokemon(pokemon_id)
     }
 
     /// Alias for find_pokemon_mut - search both players for a mutable pokemon slot.
-    pub fn find_pokemon_slot_mut(&mut self, pokemon_id: crate::ids::CardInstanceId) -> Option<&mut crate::player::PokemonSlot> {
+    pub fn find_pokemon_slot_mut(
+        &mut self,
+        pokemon_id: crate::ids::CardInstanceId,
+    ) -> Option<&mut crate::player::PokemonSlot> {
         self.find_pokemon_mut(pokemon_id)
     }
 
     /// Get attached energy cards for a pokemon.
-    pub fn get_attached_energy(&self, pokemon_id: crate::ids::CardInstanceId) -> Vec<&crate::zone::CardInstance> {
+    pub fn get_attached_energy(
+        &self,
+        pokemon_id: crate::ids::CardInstanceId,
+    ) -> Vec<&crate::zone::CardInstance> {
         for player in &self.players {
             if let Some(slot) = player.find_pokemon(pokemon_id) {
                 return slot.attached_energy.iter().collect();
@@ -831,7 +891,11 @@ impl GameState {
     /// Draw cards for a player (by index).
     pub fn draw_cards(&mut self, player_idx: usize, count: usize) {
         if player_idx < self.players.len() {
-            let player_id = if player_idx == 0 { PlayerId::P1 } else { PlayerId::P2 };
+            let player_id = if player_idx == 0 {
+                PlayerId::P1
+            } else {
+                PlayerId::P2
+            };
             self.draw_cards_with_events(player_id, count);
         }
     }
@@ -844,14 +908,18 @@ impl GameState {
         _source_id: crate::ids::CardInstanceId,
         _apply_wr: bool,
     ) {
-        if damage <= 0 { return; }
+        if damage <= 0 {
+            return;
+        }
         let counters = (damage as u16 + 9) / 10; // round up to damage counters
         self.add_damage_counters(target_id, counters);
     }
 
     /// Deal direct damage (damage counters, bypassing weakness/resistance).
     pub fn deal_direct_damage(&mut self, target_id: crate::ids::CardInstanceId, amount: i32) {
-        if amount <= 0 { return; }
+        if amount <= 0 {
+            return;
+        }
         let counters = (amount as u16 + 9) / 10;
         self.add_damage_counters(target_id, counters);
     }
@@ -875,13 +943,19 @@ impl GameState {
     }
 
     /// Apply special poison with increased damage counters per turn.
-    pub fn apply_special_poison(&mut self, target_id: crate::ids::CardInstanceId, _counters_per_turn: u16) {
+    pub fn apply_special_poison(
+        &mut self,
+        target_id: crate::ids::CardInstanceId,
+        _counters_per_turn: u16,
+    ) {
         self.apply_status(target_id, "Poisoned");
     }
 
     /// Get damage counters on a pokemon.
     pub fn get_damage_counters(&self, pokemon_id: crate::ids::CardInstanceId) -> u16 {
-        self.find_pokemon(pokemon_id).map(|s| s.damage_counters).unwrap_or(0)
+        self.find_pokemon(pokemon_id)
+            .map(|s| s.damage_counters)
+            .unwrap_or(0)
     }
 
     /// Draw a single card for a player (by index).
@@ -911,7 +985,9 @@ impl GameState {
 
     /// Shuffle a card from discard (or hand) back into the deck.
     pub fn shuffle_into_deck(&mut self, player_idx: usize, card_id: crate::ids::CardInstanceId) {
-        if player_idx >= self.players.len() { return; }
+        if player_idx >= self.players.len() {
+            return;
+        }
         // Try removing from discard
         if let Some(card) = self.players[player_idx].discard.remove(card_id) {
             self.players[player_idx].deck.add_to_top(card);
@@ -926,14 +1002,16 @@ impl GameState {
     }
 
     /// Alias for register_effect.
-    pub fn add_effect(&mut self, card_id: crate::ids::CardInstanceId, effect_name: &str, duration: u32) {
+    pub fn add_effect(
+        &mut self,
+        card_id: crate::ids::CardInstanceId,
+        effect_name: &str,
+        duration: u32,
+    ) {
         self.register_effect(card_id, effect_name, duration);
     }
 
-    pub fn owner_for_pokemon(
-        &self,
-        pokemon_id: crate::ids::CardInstanceId,
-    ) -> Option<PlayerId> {
+    pub fn owner_for_pokemon(&self, pokemon_id: crate::ids::CardInstanceId) -> Option<PlayerId> {
         if self.players[0].find_pokemon(pokemon_id).is_some() {
             return Some(PlayerId::P1);
         }
@@ -966,17 +1044,32 @@ impl GameState {
 
     fn normalize_prompt(&self, mut prompt: Prompt) -> Prompt {
         match &mut prompt {
-            Prompt::ChoosePokemonTargets { min, max, valid_targets, .. } => {
+            Prompt::ChoosePokemonTargets {
+                min,
+                max,
+                valid_targets,
+                ..
+            } => {
                 *max = (*max).min(valid_targets.len());
                 *min = (*min).min(*max);
             }
-            Prompt::ChoosePokemonInPlay { min, max, options, .. } => {
+            Prompt::ChoosePokemonInPlay {
+                min, max, options, ..
+            } => {
                 *max = (*max).min(options.len());
                 *min = (*min).min(*max);
             }
-            Prompt::ChooseCardsFromDeck { player, count, min, max, destination, .. } => {
+            Prompt::ChooseCardsFromDeck {
+                player,
+                count,
+                min,
+                max,
+                destination,
+                ..
+            } => {
                 if matches!(destination, SelectionDestination::Bench) {
-                    let free = 5usize.saturating_sub(self.players[Self::player_index(*player)].bench.len());
+                    let free = 5usize
+                        .saturating_sub(self.players[Self::player_index(*player)].bench.len());
                     let cap = max.unwrap_or(*count).min(free);
                     *count = (*count).min(free);
                     *max = Some(cap);
@@ -985,7 +1078,12 @@ impl GameState {
                     }
                 }
             }
-            Prompt::ChooseCardsFromDiscard { count, max, options, .. } => {
+            Prompt::ChooseCardsFromDiscard {
+                count,
+                max,
+                options,
+                ..
+            } => {
                 let cap = options.len();
                 *max = Some(max.unwrap_or(*count).min(cap));
                 *count = (*count).min(cap);
@@ -1030,7 +1128,11 @@ impl GameState {
         self.pending_effect_source_id = source_id;
     }
 
-    pub fn power_used_this_turn(&self, source_id: crate::ids::CardInstanceId, power_name: &str) -> bool {
+    pub fn power_used_this_turn(
+        &self,
+        source_id: crate::ids::CardInstanceId,
+        power_name: &str,
+    ) -> bool {
         self.used_powers_turn
             .contains(&(source_id, power_name.to_string()))
     }
@@ -1089,9 +1191,9 @@ impl GameState {
         pokemon_id: Option<crate::ids::CardInstanceId>,
         energy_is_special: Option<bool>,
     ) -> bool {
-        self.restrictions
-            .iter()
-            .any(|restriction| restriction.applies(self, player, pokemon_id, kind, energy_is_special))
+        self.restrictions.iter().any(|restriction| {
+            restriction.applies(self, player, pokemon_id, kind, energy_is_special)
+        })
     }
 
     fn cleanup_expired_restrictions(&mut self) {
@@ -1157,15 +1259,23 @@ impl GameState {
         player: PlayerId,
         count: usize,
     ) -> Vec<crate::ids::CardInstanceId> {
-        let idx = match player { PlayerId::P1 => 0, PlayerId::P2 => 1 };
+        let idx = match player {
+            PlayerId::P1 => 0,
+            PlayerId::P2 => 1,
+        };
         let mut ids = Vec::new();
         for _ in 0..count {
-            let Some(card) = self.players[idx].deck.draw_bottom() else { break; };
+            let Some(card) = self.players[idx].deck.draw_bottom() else {
+                break;
+            };
             ids.push(card.id);
             self.players[idx].hand.add(card);
         }
         for card_id in &ids {
-            self.pending_broadcast_events.push(GameEvent::CardDrawn { player, card_id: *card_id });
+            self.pending_broadcast_events.push(GameEvent::CardDrawn {
+                player,
+                card_id: *card_id,
+            });
         }
         ids
     }
@@ -1207,12 +1317,9 @@ impl GameState {
     }
 
     fn is_benched(&self, pokemon_id: crate::ids::CardInstanceId) -> bool {
-        self.players.iter().any(|player| {
-            player
-                .bench
-                .iter()
-                .any(|slot| slot.card.id == pokemon_id)
-        })
+        self.players
+            .iter()
+            .any(|player| player.bench.iter().any(|slot| slot.card.id == pokemon_id))
     }
 
     pub fn remove_marker(&mut self, pokemon_id: crate::ids::CardInstanceId, name: &str) {
@@ -1230,8 +1337,7 @@ impl GameState {
             .find_pokemon(pokemon_id)
             .map(|slot| slot.markers.iter().any(|marker| marker.name == name))
             .unwrap_or(false)
-            || self
-                .players[1]
+            || self.players[1]
                 .find_pokemon(pokemon_id)
                 .map(|slot| slot.markers.iter().any(|marker| marker.name == name))
                 .unwrap_or(false)
@@ -1305,7 +1411,11 @@ impl GameState {
                 .enumerate()
                 .map(|(idx, effect)| {
                     let owner = self.owner_for_trigger_source(effect.source_id);
-                    let priority = if owner == Some(self.turn.player) { 0 } else { 1 };
+                    let priority = if owner == Some(self.turn.player) {
+                        0
+                    } else {
+                        1
+                    };
                     (idx, effect, priority)
                 })
                 .collect();
@@ -1321,9 +1431,8 @@ impl GameState {
     }
 
     fn execute_triggered_effect(&mut self, effect: &TriggeredEffect) {
-        let power_name = power_name_from_effect_id(&effect.effect_id).or_else(|| {
-            effect.event.power_name().map(|name| name.to_string())
-        });
+        let power_name = power_name_from_effect_id(&effect.effect_id)
+            .or_else(|| effect.event.power_name().map(|name| name.to_string()));
         let Some(power_name) = power_name else {
             return;
         };
@@ -1348,11 +1457,7 @@ impl GameState {
         crate::apply_tool_stadium_effects(self);
     }
 
-    pub fn register_replacement_handler(
-        &mut self,
-        effect_id: String,
-        handler: ReplacementHandler,
-    ) {
+    pub fn register_replacement_handler(&mut self, effect_id: String, handler: ReplacementHandler) {
         self.replacement_handlers.insert(effect_id, handler);
     }
 
@@ -1463,7 +1568,11 @@ impl GameState {
         tool_id: crate::ids::CardInstanceId,
         owner: PlayerId,
     ) {
-        if self.tool_discard_queue.iter().any(|schedule| schedule.tool_id == tool_id) {
+        if self
+            .tool_discard_queue
+            .iter()
+            .any(|schedule| schedule.tool_id == tool_id)
+        {
             return;
         }
         self.tool_discard_queue.push(ToolDiscardSchedule {
@@ -1479,7 +1588,11 @@ impl GameState {
         tool_id: crate::ids::CardInstanceId,
         owner: PlayerId,
     ) {
-        if self.tool_discard_queue.iter().any(|schedule| schedule.tool_id == tool_id) {
+        if self
+            .tool_discard_queue
+            .iter()
+            .any(|schedule| schedule.tool_id == tool_id)
+        {
             return;
         }
         let opponent = match self.turn.player {
@@ -1495,18 +1608,27 @@ impl GameState {
     }
 
     pub fn lock_pokepower_next_turn(&mut self, player: PlayerId) {
-        self.power_locks
-            .push(PowerLock::for_next_turn(PowerLockKind::PokePower, player, self.turn.number));
+        self.power_locks.push(PowerLock::for_next_turn(
+            PowerLockKind::PokePower,
+            player,
+            self.turn.number,
+        ));
     }
 
     pub fn lock_pokebody_next_turn(&mut self, player: PlayerId) {
-        self.power_locks
-            .push(PowerLock::for_next_turn(PowerLockKind::PokeBody, player, self.turn.number));
+        self.power_locks.push(PowerLock::for_next_turn(
+            PowerLockKind::PokeBody,
+            player,
+            self.turn.number,
+        ));
     }
 
     pub fn lock_trainer_next_turn(&mut self, player: PlayerId) {
-        self.power_locks
-            .push(PowerLock::for_next_turn(PowerLockKind::Trainer, player, self.turn.number));
+        self.power_locks.push(PowerLock::for_next_turn(
+            PowerLockKind::Trainer,
+            player,
+            self.turn.number,
+        ));
     }
 
     pub fn add_active_power_lock(
@@ -1651,7 +1773,11 @@ impl GameState {
         self.stat_modifiers.push(entry);
     }
 
-    pub fn attack_cost_modifier(&self, attacker_id: crate::ids::CardInstanceId, attack: &Attack) -> i32 {
+    pub fn attack_cost_modifier(
+        &self,
+        attacker_id: crate::ids::CardInstanceId,
+        attack: &Attack,
+    ) -> i32 {
         self.resolve_stat_amount(StatModifierKind::AttackCost, attacker_id)
             + self.resolve_stat_amount_ctx(
                 StatModifierKind::AttackCostByPrizeDiff,
@@ -1662,7 +1788,11 @@ impl GameState {
             + crate::attack_cost_modifier(self, attacker_id, attack)
     }
 
-    pub fn attack_cost_met(&self, attacker_id: crate::ids::CardInstanceId, attack: &Attack) -> bool {
+    pub fn attack_cost_met(
+        &self,
+        attacker_id: crate::ids::CardInstanceId,
+        attack: &Attack,
+    ) -> bool {
         let cost_modifier = self.attack_cost_modifier(attacker_id, attack);
         let required_total = (attack.cost.total_energy as i32 + cost_modifier).max(0) as usize;
         let slot = match self.slot_by_id(attacker_id) {
@@ -1729,7 +1859,13 @@ impl GameState {
         let mut assigned: Vec<Option<usize>> = vec![None; energy_types.len()];
         for requirement in 0..requirements.len() {
             let mut seen = vec![false; energy_types.len()];
-            if !augment(requirement, &requirements, &energy_types, &mut assigned, &mut seen) {
+            if !augment(
+                requirement,
+                &requirements,
+                &energy_types,
+                &mut assigned,
+                &mut seen,
+            ) {
                 return false;
             }
         }
@@ -1740,18 +1876,27 @@ impl GameState {
 
     /// Printed Energy units attached to a Pokemon after card and Stadium overrides.
     pub fn attached_energy_units(&self, pokemon_id: crate::ids::CardInstanceId) -> usize {
-        let Some(slot) = self.slot_by_id(pokemon_id) else { return 0; };
-        slot.attached_energy.iter().map(|energy| {
-            let provides = self.energy_provides(energy);
-            let mut units = (self.hooks().energy_units)(self, pokemon_id, energy, &provides);
-            if (self.hooks().is_double_rainbow)(&energy.def_id) { units = 2; }
-            (self.hooks().energy_units_override)(self, slot, energy, units)
-        }).sum()
+        let Some(slot) = self.slot_by_id(pokemon_id) else {
+            return 0;
+        };
+        slot.attached_energy
+            .iter()
+            .map(|energy| {
+                let provides = self.energy_provides(energy);
+                let mut units = (self.hooks().energy_units)(self, pokemon_id, energy, &provides);
+                if (self.hooks().is_double_rainbow)(&energy.def_id) {
+                    units = 2;
+                }
+                (self.hooks().energy_units_override)(self, slot, energy, units)
+            })
+            .sum()
     }
 
     /// Attack currently resolving, for expansion hooks that apply named post-attack effects.
     pub fn resolving_attack(&self) -> Option<(crate::ids::CardInstanceId, &Attack)> {
-        self.resolving_attack.as_ref().map(|(attacker, attack)| (*attacker, attack))
+        self.resolving_attack
+            .as_ref()
+            .map(|(attacker, attack)| (*attacker, attack))
     }
 
     /// Returns a list of attacks the active Pokemon can use (has enough energy for).
@@ -1770,7 +1915,11 @@ impl GameState {
         {
             return Vec::new();
         }
-        if slot.markers.iter().any(|marker| marker.name == "CannotAttack") {
+        if slot
+            .markers
+            .iter()
+            .any(|marker| marker.name == "CannotAttack")
+        {
             return Vec::new();
         }
         let attacker_id = slot.card.id;
@@ -1783,7 +1932,9 @@ impl GameState {
             .iter()
             .filter(|attack| {
                 self.attack_cost_met(attacker_id, attack)
-                    && !blocked_attacks.iter().any(|blocked| attack.name == *blocked)
+                    && !blocked_attacks
+                        .iter()
+                        .any(|blocked| attack.name == *blocked)
             })
             .cloned()
             .collect()
@@ -1811,10 +1962,11 @@ impl GameState {
             .and_then(|slot| slot.attached_tool.take());
         match tool {
             Some(tool) => {
-                self.pending_broadcast_events.push(GameEvent::ToolDiscarded {
-                    player: tool.owner,
-                    tool_id: tool.id,
-                });
+                self.pending_broadcast_events
+                    .push(GameEvent::ToolDiscarded {
+                        player: tool.owner,
+                        tool_id: tool.id,
+                    });
                 let index = Self::player_index(tool.owner);
                 self.players[index].discard.add(tool);
                 true
@@ -1827,10 +1979,11 @@ impl GameState {
     pub fn discard_stadium_in_play(&mut self) -> bool {
         match self.stadium_in_play.take() {
             Some(stadium) => {
-                self.pending_broadcast_events.push(GameEvent::StadiumDiscarded {
-                    player: stadium.owner,
-                    stadium_id: stadium.id,
-                });
+                self.pending_broadcast_events
+                    .push(GameEvent::StadiumDiscarded {
+                        player: stadium.owner,
+                        stadium_id: stadium.id,
+                    });
                 let index = Self::player_index(stadium.owner);
                 self.players[index].discard.add(stadium);
                 true
@@ -2016,7 +2169,12 @@ impl GameState {
         attacker_id: crate::ids::CardInstanceId,
         defender_id: crate::ids::CardInstanceId,
     ) -> bool {
-        self.resolve_stat_bool_ctx(StatModifierKind::IgnoreWeakness, attacker_id, attacker_id, defender_id)
+        self.resolve_stat_bool_ctx(
+            StatModifierKind::IgnoreWeakness,
+            attacker_id,
+            attacker_id,
+            defender_id,
+        )
     }
 
     pub fn ignore_resistance_for(
@@ -2024,7 +2182,12 @@ impl GameState {
         attacker_id: crate::ids::CardInstanceId,
         defender_id: crate::ids::CardInstanceId,
     ) -> bool {
-        self.resolve_stat_bool_ctx(StatModifierKind::IgnoreResistance, attacker_id, attacker_id, defender_id)
+        self.resolve_stat_bool_ctx(
+            StatModifierKind::IgnoreResistance,
+            attacker_id,
+            attacker_id,
+            defender_id,
+        )
     }
 
     /// Whether damage should be prevented for this attack context.
@@ -2039,7 +2202,12 @@ impl GameState {
         }
         // Interpret PreventDamage as applying to the defender (the Pokemon being hit),
         // but allow AttackSelector to match attacker/defender jointly.
-        self.resolve_stat_bool_ctx(StatModifierKind::PreventDamage, defender_id, attacker_id, defender_id)
+        self.resolve_stat_bool_ctx(
+            StatModifierKind::PreventDamage,
+            defender_id,
+            attacker_id,
+            defender_id,
+        )
     }
 
     pub fn prevent_bench_damage_for(
@@ -2113,10 +2281,7 @@ impl GameState {
         )
     }
 
-    pub fn type_override_for(
-        &self,
-        pokemon_id: crate::ids::CardInstanceId,
-    ) -> Option<crate::Type> {
+    pub fn type_override_for(&self, pokemon_id: crate::ids::CardInstanceId) -> Option<crate::Type> {
         self.resolve_stat_type(StatModifierKind::TypeOverride, pokemon_id)
             .and_then(|types| types.first().copied())
     }
@@ -2126,7 +2291,8 @@ impl GameState {
         attacker_id: crate::ids::CardInstanceId,
         attack: &Attack,
     ) -> crate::Type {
-        if let Some(types) = self.resolve_stat_type(StatModifierKind::AttackTypeOverride, attacker_id)
+        if let Some(types) =
+            self.resolve_stat_type(StatModifierKind::AttackTypeOverride, attacker_id)
         {
             if let Some(type_) = types.first() {
                 return *type_;
@@ -2159,10 +2325,7 @@ impl GameState {
         }
     }
 
-    pub fn effective_types_for(
-        &self,
-        pokemon_id: crate::ids::CardInstanceId,
-    ) -> Vec<crate::Type> {
+    pub fn effective_types_for(&self, pokemon_id: crate::ids::CardInstanceId) -> Vec<crate::Type> {
         let slot = match self
             .current_player()
             .find_pokemon(pokemon_id)
@@ -2171,9 +2334,9 @@ impl GameState {
             Some(slot) => slot,
             None => return Vec::new(),
         };
-        let override_types =
-            self.resolve_stat_type(StatModifierKind::TypeOverride, pokemon_id)
-                .unwrap_or_default();
+        let override_types = self
+            .resolve_stat_type(StatModifierKind::TypeOverride, pokemon_id)
+            .unwrap_or_default();
         let mut base = if override_types.is_empty() {
             slot.types.clone()
         } else {
@@ -2235,8 +2398,18 @@ impl GameState {
         // Generalized modifier system contributions:
         // - DamageDealt applies to attacker
         // - DamageTaken applies to defender (negative values reduce damage)
-        let dealt = self.resolve_stat_amount_ctx(StatModifierKind::DamageDealt, attacker_id, attacker_id, defender_id);
-        let taken = self.resolve_stat_amount_ctx(StatModifierKind::DamageTaken, defender_id, attacker_id, defender_id);
+        let dealt = self.resolve_stat_amount_ctx(
+            StatModifierKind::DamageDealt,
+            attacker_id,
+            attacker_id,
+            defender_id,
+        );
+        let taken = self.resolve_stat_amount_ctx(
+            StatModifierKind::DamageTaken,
+            defender_id,
+            attacker_id,
+            defender_id,
+        );
         legacy + dealt + taken
     }
 
@@ -2552,7 +2725,11 @@ impl GameState {
         }
         let effects = self.between_turns_effects.clone();
         for effect in effects {
-            self.apply_between_turns_damage_to_target(effect.target_id, effect.counters, effect.source_id);
+            self.apply_between_turns_damage_to_target(
+                effect.target_id,
+                effect.counters,
+                effect.source_id,
+            );
             if self.finished.is_some() {
                 break;
             }
@@ -2576,9 +2753,7 @@ impl GameState {
             PlayerId::P2 => (&mut self.players[1], PlayerId::P2),
         };
         if let Some(active) = target.active.as_mut() {
-            active.damage_counters = active
-                .damage_counters
-                .saturating_add((amount / 10) as u16);
+            active.damage_counters = active.damage_counters.saturating_add((amount / 10) as u16);
             self.event_log.push(GameEvent::DamageDealt {
                 pokemon_id: active.card.id,
                 amount,
@@ -2748,10 +2923,8 @@ impl GameState {
         }
 
         self.tool_discard_queue = remaining;
-        events.extend(self.discard_tools_with_timing(
-            end_turn_player,
-            "EndOfOpponentTurnAfterPlay",
-        ));
+        events
+            .extend(self.discard_tools_with_timing(end_turn_player, "EndOfOpponentTurnAfterPlay"));
         events
     }
 
@@ -2805,38 +2978,35 @@ impl GameState {
     }
 
     fn setup_complete(&self) -> bool {
-        self.setup_steps
-            .iter()
-            .all(|step| *step == SetupStep::Done)
+        self.setup_steps.iter().all(|step| *step == SetupStep::Done)
     }
 
     fn has_basic_in_hand(&self, player_index: usize) -> bool {
         let hand = self.players[player_index].hand.cards();
-        hand.iter()
-            .any(|card| {
-                self.card_meta
-                    .get(&card.def_id)
-                    .map(|meta| meta.is_pokemon && meta.is_basic)
-                    .unwrap_or(true)
-            })
+        hand.iter().any(|card| {
+            self.card_meta
+                .get(&card.def_id)
+                .map(|meta| meta.is_pokemon && meta.is_basic)
+                .unwrap_or(true)
+        })
     }
 
     fn deck_has_basic(&self, player_index: usize) -> bool {
         let deck = self.players[player_index].deck.cards();
-        deck.iter()
-            .any(|card| {
-                self.card_meta
-                    .get(&card.def_id)
-                    .map(|meta| meta.is_pokemon && meta.is_basic)
-                    .unwrap_or(true)
-            })
+        deck.iter().any(|card| {
+            self.card_meta
+                .get(&card.def_id)
+                .map(|meta| meta.is_pokemon && meta.is_basic)
+                .unwrap_or(true)
+        })
     }
 
     fn draw_starting_hands(&mut self) {
         for player_index in 0..2 {
             self.players[player_index].draw(7);
             while !self.has_basic_in_hand(player_index) && self.deck_has_basic(player_index) {
-                self.mulligan_counts[player_index] = self.mulligan_counts[player_index].saturating_add(1);
+                self.mulligan_counts[player_index] =
+                    self.mulligan_counts[player_index].saturating_add(1);
                 self.return_hand_to_deck(player_index);
                 let seed = self.rng.next_u64();
                 self.players[player_index].shuffle_deck(seed);
@@ -2972,6 +3142,37 @@ impl GameState {
         slot
     }
 
+    /// Replace a resolving copy effect with a normal attack declaration by the
+    /// current Active Pokemon. The supplied attack should already contain any
+    /// copied-cost or copied-type adjustments required by the card effect.
+    pub fn execute_copied_attack(
+        &mut self,
+        source_id: crate::ids::CardInstanceId,
+        attack: crate::Attack,
+    ) -> bool {
+        self.pending_prompt = None;
+        self.pending_attack = None;
+        self.pending_custom_effect_id = None;
+        self.pending_custom_source_id = None;
+        self.pending_custom_cards.clear();
+        let Some(slot) = self.find_pokemon_slot_mut(source_id) else {
+            return false;
+        };
+        slot.attacks.push(attack.clone());
+        let attack_name = attack.name.clone();
+        let result = crate::action::execute(self, crate::Action::DeclareAttack { attack }).is_ok();
+        if let Some(slot) = self.find_pokemon_slot_mut(source_id) {
+            if slot
+                .attacks
+                .last()
+                .is_some_and(|known| known.name == attack_name)
+            {
+                slot.attacks.pop();
+            }
+        }
+        result
+    }
+
     pub fn apply_card_meta_to_slot(&self, slot: &mut PokemonSlot) {
         if let Some(meta) = self.card_meta.get(&slot.card.def_id) {
             slot.is_ex = meta.is_ex;
@@ -3005,7 +3206,10 @@ impl GameState {
     /// Centralized method to look up card metadata with energy ID normalization.
     /// This ensures consistent lookups across the codebase and handles energy card
     /// ID format variations (e.g., "ENERGY-GRASS" vs "GRASS-ENERGY").
-    pub fn get_card_meta(&self, def_id: &crate::ids::CardDefId) -> Option<&crate::card_meta::CardMeta> {
+    pub fn get_card_meta(
+        &self,
+        def_id: &crate::ids::CardDefId,
+    ) -> Option<&crate::card_meta::CardMeta> {
         // Try direct lookup first
         if let Some(meta) = self.card_meta.get(def_id) {
             return Some(meta);
@@ -3053,7 +3257,10 @@ impl GameState {
             .unwrap_or_default()
     }
 
-    pub fn attached_energy_types(&self, pokemon_id: crate::ids::CardInstanceId) -> Vec<crate::Type> {
+    pub fn attached_energy_types(
+        &self,
+        pokemon_id: crate::ids::CardInstanceId,
+    ) -> Vec<crate::Type> {
         let slot = match self
             .current_player()
             .find_pokemon(pokemon_id)
@@ -3103,13 +3310,19 @@ impl GameState {
     }
 
     /// Build revealed card info for UI display given a list of card IDs
-    pub fn build_revealed_cards(&self, card_ids: &[crate::ids::CardInstanceId]) -> Vec<crate::prompt::RevealedCard> {
+    pub fn build_revealed_cards(
+        &self,
+        card_ids: &[crate::ids::CardInstanceId],
+    ) -> Vec<crate::prompt::RevealedCard> {
         card_ids
             .iter()
             .filter_map(|id| {
                 // Search all zones for this card
                 for player in &self.players {
-                    for card in player.deck.cards().iter()
+                    for card in player
+                        .deck
+                        .cards()
+                        .iter()
                         .chain(player.hand.cards().iter())
                         .chain(player.discard.cards().iter())
                         .chain(player.prizes.cards().iter())
@@ -3219,9 +3432,7 @@ impl GameState {
             ZoneKind::Deck => match deck_placement.unwrap_or(SelectionDestination::DeckTop) {
                 SelectionDestination::DeckBottom => destination.add_to_bottom(card),
                 SelectionDestination::DeckTop => destination.add_to_top(card),
-                SelectionDestination::Hand | SelectionDestination::Discard => {
-                    destination.add(card)
-                }
+                SelectionDestination::Hand | SelectionDestination::Discard => destination.add(card),
                 SelectionDestination::Bench => destination.add_to_top(card),
                 _ => destination.add_to_top(card),
             },
@@ -3326,7 +3537,11 @@ impl GameState {
         };
         if let Some(evolves_from) = meta.evolves_from.as_ref() {
             fn species(name: &str) -> String {
-                name.replace(" δ", "").replace("δ", "").replace(" ex", "").trim().to_string()
+                name.replace(" δ", "")
+                    .replace("δ", "")
+                    .replace(" ex", "")
+                    .trim()
+                    .to_string()
             }
             return target_meta.name == *evolves_from
                 || species(&target_meta.name) == species(evolves_from);
@@ -3385,10 +3600,8 @@ impl GameState {
         if self.players[1].prizes.is_empty() {
             return Some((PlayerId::P2, WinCondition::Prizes));
         }
-        let p1_has_pokemon =
-            self.players[0].active.is_some() || !self.players[0].bench.is_empty();
-        let p2_has_pokemon =
-            self.players[1].active.is_some() || !self.players[1].bench.is_empty();
+        let p1_has_pokemon = self.players[0].active.is_some() || !self.players[0].bench.is_empty();
+        let p2_has_pokemon = self.players[1].active.is_some() || !self.players[1].bench.is_empty();
         if !p1_has_pokemon {
             return Some((PlayerId::P2, WinCondition::NoPokemon));
         }
@@ -3411,13 +3624,20 @@ impl GameState {
             return Err(ActionError::WrongPlayer);
         }
 
-        if matches!(action, Action::ChooseActive { .. } | Action::ChooseBench { .. }) {
+        if matches!(
+            action,
+            Action::ChooseActive { .. } | Action::ChooseBench { .. }
+        ) {
             self.turn.player = player;
         }
 
         let had_prompt = self.pending_prompt.is_some();
         let prompt_version_before = self.pending_prompt_version;
-        self.answering_prompt_version = if had_prompt { Some(prompt_version_before) } else { None };
+        self.answering_prompt_version = if had_prompt {
+            Some(prompt_version_before)
+        } else {
+            None
+        };
         let result = crate::execute(self, action.clone());
         self.answering_prompt_version = None;
         let mut events = match result {
@@ -3494,10 +3714,7 @@ impl GameState {
             let prompt = pending.prompt.clone();
             let for_player = pending.for_player;
             self.update_invariants();
-            return StepResult::Prompt {
-                prompt,
-                for_player,
-            };
+            return StepResult::Prompt { prompt, for_player };
         }
 
         // Safety: outside of Setup, a player should never be left without an active Pokemon
@@ -3530,9 +3747,7 @@ impl GameState {
                 PlayerId::P2
             };
             let step = self.setup_steps[Self::player_index(next_player)];
-            let hand_cards = self.players[Self::player_index(next_player)]
-                .hand
-                .cards();
+            let hand_cards = self.players[Self::player_index(next_player)].hand.cards();
             let hand: Vec<_> = hand_cards
                 .iter()
                 .filter(|card| {
@@ -3628,7 +3843,11 @@ impl GameState {
                 // Only show attacks the player can actually use (has enough energy for)
                 let usable_attacks = self.get_usable_attacks(self.turn.player);
                 if usable_attacks.len() > 1 {
-                    let prompt = Prompt::ChooseAttack { attacks: usable_attacks, player: None, options: Vec::new() };
+                    let prompt = Prompt::ChooseAttack {
+                        attacks: usable_attacks,
+                        player: None,
+                        options: Vec::new(),
+                    };
                     self.set_pending_prompt(prompt.clone(), self.turn.player);
                     return StepResult::Prompt {
                         prompt,
@@ -3793,7 +4012,12 @@ impl GameState {
 
         self.turn.phase = Phase::Main;
         if self.current_player().active.is_some() && self.opponent_player().active.is_some() {
-            let _ = crate::execute(self, Action::DeclareAttack { attack: attack.clone() });
+            let _ = crate::execute(
+                self,
+                Action::DeclareAttack {
+                    attack: attack.clone(),
+                },
+            );
             self.resolve_triggers();
             if let Some((_, reason)) = self.finished {
                 return Some(reason);
@@ -3905,13 +4129,21 @@ impl GameState {
     }
 
     pub fn is_card_active(&self, card_id: crate::ids::CardInstanceId) -> bool {
-        self.players
-            .iter()
-            .any(|player| player.active.as_ref().map(|slot| slot.card.id == card_id).unwrap_or(false))
+        self.players.iter().any(|player| {
+            player
+                .active
+                .as_ref()
+                .map(|slot| slot.card.id == card_id)
+                .unwrap_or(false)
+        })
     }
 
     /// Evolve a pokemon by placing a new card on it
-    pub fn evolve_pokemon(&mut self, target_id: crate::ids::CardInstanceId, evolution_card_id: crate::ids::CardInstanceId) {
+    pub fn evolve_pokemon(
+        &mut self,
+        target_id: crate::ids::CardInstanceId,
+        evolution_card_id: crate::ids::CardInstanceId,
+    ) {
         for player in self.players.iter_mut() {
             // First try to remove the evolution card from hand
             let evo_card = match player.hand.remove(evolution_card_id) {
@@ -3941,7 +4173,12 @@ impl GameState {
     }
 
     /// Register a damage reduction effect on a pokemon
-    pub fn register_damage_reduction(&mut self, card_id: crate::ids::CardInstanceId, amount: i32, duration: u32) {
+    pub fn register_damage_reduction(
+        &mut self,
+        card_id: crate::ids::CardInstanceId,
+        amount: i32,
+        duration: u32,
+    ) {
         self.register_effect(card_id, &format!("damage_reduction_{}", amount), duration);
     }
 
@@ -3974,21 +4211,12 @@ fn parse_stacking_rule(value: &str) -> Option<StackingRule> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        Attack,
-        AttackCost,
-        CardMeta,
-        CardMetaMap,
-        PokemonSlot,
-        PokemonSelector,
-        Stage,
-        StatModifierEntry,
-        StatModifierKind,
-        StatModifierValue,
-        Type,
-    };
     use crate::ids::CardDefId;
     use crate::zone::CardInstance;
+    use crate::{
+        Attack, AttackCost, CardMeta, CardMetaMap, PokemonSelector, PokemonSlot, Stage,
+        StatModifierEntry, StatModifierKind, StatModifierValue, Type,
+    };
     use tcg_rules_ex::RulesetConfig;
 
     fn create_test_deck(count: usize, player: PlayerId) -> Vec<CardInstance> {
@@ -4034,8 +4262,7 @@ mod tests {
         let mut slot = PokemonSlot::new(attacker_id.clone());
         slot.types = vec![Type::Water];
         game.players[0].active = Some(slot);
-        let mut modifier =
-            StatModifierEntry::new_amount(StatModifierKind::AttackTypeOverride, 0);
+        let mut modifier = StatModifierEntry::new_amount(StatModifierKind::AttackTypeOverride, 0);
         modifier.value = StatModifierValue::Type(Type::Fire);
         modifier.source = Some(attacker_id.id);
         modifier.source_only = true;
@@ -4044,7 +4271,10 @@ mod tests {
             name: "Test Attack".to_string(),
             damage: 10,
             attack_type: Type::Water,
-            cost: AttackCost { total_energy: 0, types: Vec::new() },
+            cost: AttackCost {
+                total_energy: 0,
+                types: Vec::new(),
+            },
             effect_ast: None,
         };
         assert_eq!(game.attack_type_for(attacker_id.id, &attack), Type::Fire);
@@ -4055,7 +4285,8 @@ mod tests {
         let deck1 = create_test_deck(60, PlayerId::P1);
         let deck2 = create_test_deck(60, PlayerId::P2);
         let mut game = GameState::new(deck1, deck2, 4, RulesetConfig::default());
-        let mut slot = PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-010"), PlayerId::P1));
+        let mut slot =
+            PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-010"), PlayerId::P1));
         slot.stage = Stage::Stage1;
         let slot_id = slot.card.id;
         game.players[0].active = Some(slot);
@@ -4128,8 +4359,14 @@ mod tests {
             RulesetConfig::default(),
             card_meta,
         );
-        let ampharos = PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-DELTA-1"), PlayerId::P1));
-        let other = PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-NORMAL-1"), PlayerId::P1));
+        let ampharos = PokemonSlot::new(CardInstance::new(
+            CardDefId::new("TEST-DELTA-1"),
+            PlayerId::P1,
+        ));
+        let other = PokemonSlot::new(CardInstance::new(
+            CardDefId::new("TEST-NORMAL-1"),
+            PlayerId::P1,
+        ));
         let other_id = other.card.id;
         game.players[0].active = Some(ampharos);
         game.players[0].bench.push(other);
@@ -4215,7 +4452,8 @@ mod tests {
             card_meta,
         );
         let basic = CardInstance::new(CardDefId::new("TEST-001"), PlayerId::P1);
-        let mut stage1 = PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-010"), PlayerId::P1));
+        let mut stage1 =
+            PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-010"), PlayerId::P1));
         stage1.stage = Stage::Stage1;
         stage1.damage_counters = 5;
         stage1.add_special_condition(tcg_rules_ex::SpecialCondition::Asleep);
@@ -4312,7 +4550,10 @@ mod tests {
             name: "Tackle".to_string(),
             damage: 20,
             attack_type: crate::Type::Colorless,
-            cost: crate::AttackCost { total_energy: 0 , types: Vec::new() },
+            cost: crate::AttackCost {
+                total_energy: 0,
+                types: Vec::new(),
+            },
             effect_ast: None,
         };
 
@@ -4335,11 +4576,19 @@ mod tests {
             name: "Tackle".to_string(),
             damage: 20,
             attack_type: crate::Type::Colorless,
-            cost: crate::AttackCost { total_energy: 0 , types: Vec::new() },
+            cost: crate::AttackCost {
+                total_energy: 0,
+                types: Vec::new(),
+            },
             effect_ast: None,
         };
 
-        let mut game1 = GameState::new(deck1.clone(), deck2.clone(), 12345, RulesetConfig::default());
+        let mut game1 = GameState::new(
+            deck1.clone(),
+            deck2.clone(),
+            12345,
+            RulesetConfig::default(),
+        );
         let mut game2 = GameState::new(deck1, deck2, 12345, RulesetConfig::default());
 
         for game in [&mut game1, &mut game2] {

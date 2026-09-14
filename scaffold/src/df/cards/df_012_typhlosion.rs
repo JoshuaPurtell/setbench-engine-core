@@ -9,8 +9,8 @@
 //! another Pokemon (yours or your opponent's). This power can't be used if
 //! Typhlosion is affected by a Special Condition.
 
-use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt};
 use tcg_core::runtime_hooks::def_id_matches;
+use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt};
 
 /// Card identifiers
 pub const SET: &str = "DF";
@@ -113,7 +113,10 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[0].bench.iter().any(|slot| slot.card.id == card_id)
+        || game.players[0]
+            .bench
+            .iter()
+            .any(|slot| slot.card.id == card_id)
     {
         return Some(PlayerId::P1);
     }
@@ -123,7 +126,10 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[1].bench.iter().any(|slot| slot.card.id == card_id)
+        || game.players[1]
+            .bench
+            .iter()
+            .any(|slot| slot.card.id == card_id)
     {
         return Some(PlayerId::P2);
     }

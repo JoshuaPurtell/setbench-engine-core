@@ -52,8 +52,6 @@ pub fn battle_aura_bonus(game: &GameState, attacker_id: CardInstanceId) -> i32 {
 // Tests
 // ============================================================================
 
-
-
 pub fn attack_overrides(
     game: &GameState,
     _attack: &Attack,

@@ -79,7 +79,12 @@ pub fn execute_island_hermit(game: &mut GameState, source_id: CardInstanceId) ->
         min: 0,
         max: 2,
     };
-    game.set_pending_prompt_custom(prompt, owner, "DF-76:Island Hermit".to_string(), Some(source_id));
+    game.set_pending_prompt_custom(
+        prompt,
+        owner,
+        "DF-76:Island Hermit".to_string(),
+        Some(source_id),
+    );
     true
 }
 
@@ -103,11 +108,16 @@ pub fn execute_holon_mentor(game: &mut GameState, source_id: CardInstanceId) -> 
         min: Some(1),
         max: Some(1),
         return_to_deck: false,
-    destination: SelectionDestination::default(),
-    valid_targets: Vec::new(),
-    effect_description: String::new(),
+        destination: SelectionDestination::default(),
+        valid_targets: Vec::new(),
+        effect_description: String::new(),
     };
-    game.set_pending_prompt_custom(prompt, owner, "DF-75:Holon Mentor:Discard".to_string(), Some(source_id));
+    game.set_pending_prompt_custom(
+        prompt,
+        owner,
+        "DF-75:Holon Mentor:Discard".to_string(),
+        Some(source_id),
+    );
     true
 }
 
@@ -175,7 +185,12 @@ pub fn resolve_holon_mentor_discard(
         destination: SelectionDestination::Hand,
         shuffle: true,
     };
-    game.set_pending_prompt_custom(prompt, owner, "DF-75:Holon Mentor:Deck".to_string(), Some(source_id));
+    game.set_pending_prompt_custom(
+        prompt,
+        owner,
+        "DF-75:Holon Mentor:Deck".to_string(),
+        Some(source_id),
+    );
     true
 }
 
@@ -245,7 +260,7 @@ pub fn execute_mr_stone_project(game: &mut GameState, source_id: CardInstanceId)
             min: Some(0),
             max: Some(2),
             destination: SelectionDestination::Hand,
-        effect_description: String::new(),
+            effect_description: String::new(),
         };
         game.set_pending_prompt_custom(
             prompt,
@@ -277,7 +292,11 @@ pub fn resolve_mr_stone_project_discard(
     prompt_mr_stone_deck(game, owner, source_id)
 }
 
-pub fn prompt_mr_stone_deck(game: &mut GameState, owner: PlayerId, source_id: CardInstanceId) -> bool {
+pub fn prompt_mr_stone_deck(
+    game: &mut GameState,
+    owner: PlayerId,
+    source_id: CardInstanceId,
+) -> bool {
     let owner_index = match owner {
         PlayerId::P1 => 0,
         PlayerId::P2 => 1,
@@ -368,9 +387,14 @@ pub fn execute_old_rod(game: &mut GameState, source_id: CardInstanceId) -> bool 
             min: Some(1),
             max: Some(1),
             destination: SelectionDestination::Hand,
-        effect_description: String::new(),
+            effect_description: String::new(),
         };
-        game.set_pending_prompt_custom(prompt, owner, "DF-78:Old Rod:Pokemon".to_string(), Some(source_id));
+        game.set_pending_prompt_custom(
+            prompt,
+            owner,
+            "DF-78:Old Rod:Pokemon".to_string(),
+            Some(source_id),
+        );
         return true;
     }
     if heads == 0 {
@@ -396,9 +420,14 @@ pub fn execute_old_rod(game: &mut GameState, source_id: CardInstanceId) -> bool 
             min: Some(1),
             max: Some(1),
             destination: SelectionDestination::Hand,
-        effect_description: String::new(),
+            effect_description: String::new(),
         };
-        game.set_pending_prompt_custom(prompt, owner, "DF-78:Old Rod:Trainer".to_string(), Some(source_id));
+        game.set_pending_prompt_custom(
+            prompt,
+            owner,
+            "DF-78:Old Rod:Trainer".to_string(),
+            Some(source_id),
+        );
         return true;
     }
     true

@@ -61,8 +61,6 @@ fn count_delta_pokemon_in_play(game: &GameState, attacker_id: CardInstanceId) ->
 // Tests
 // ============================================================================
 
-
-
 pub fn attack_overrides(
     game: &GameState,
     attack: &Attack,

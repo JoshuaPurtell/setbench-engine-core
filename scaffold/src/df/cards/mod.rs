@@ -99,26 +99,126 @@ pub fn attack_overrides(
     defender_id: CardInstanceId,
 ) -> AttackOverrides {
     let mut overrides = AttackOverrides::default();
-    overrides.merge(df_001_ampharos::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_002_feraligatr::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_003_heracross::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_007_nidoqueen::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_009_pinsir::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_015_dewgong::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_016_gligar::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_021_quagsire::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_023_tropius::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_025_xatu::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_032_kirlia::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_035_nidorino::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_037_seadra::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_039_smeargle::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_049_feebas::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_060_ralts::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_065_swablu::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_094_kingdra_ex::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_098_salamence_ex::attack_overrides(game, attack, attacker_id, defender_id));
-    overrides.merge(df_099_tyranitar_ex::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(df_001_ampharos::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_002_feraligatr::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_003_heracross::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_007_nidoqueen::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_009_pinsir::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_015_dewgong::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_016_gligar::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_021_quagsire::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_023_tropius::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_025_xatu::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_032_kirlia::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_035_nidorino::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_037_seadra::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_039_smeargle::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_049_feebas::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_060_ralts::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_065_swablu::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_094_kingdra_ex::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_098_salamence_ex::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
+    overrides.merge(df_099_tyranitar_ex::attack_overrides(
+        game,
+        attack,
+        attacker_id,
+        defender_id,
+    ));
     overrides
 }
 
@@ -189,7 +289,8 @@ pub fn power_effect_id(def_id: &CardDefId, power_name: &str) -> Option<String> {
     {
         return Some(df_010_snorlax::dozing_effect_id());
     }
-    if def_id_matches(def_id, df_005_milotic::SET, df_005_milotic::NUMBER) && power_name == "Sharing"
+    if def_id_matches(def_id, df_005_milotic::SET, df_005_milotic::NUMBER)
+        && power_name == "Sharing"
     {
         return Some(df_005_milotic::sharing_effect_id());
     }
@@ -206,7 +307,8 @@ pub fn power_effect_id(def_id: &CardDefId, power_name: &str) -> Option<String> {
     {
         return Some("DF-20:Power Circulation".to_string());
     }
-    if def_id_matches(def_id, df_021_quagsire::SET, df_021_quagsire::NUMBER) && power_name == "Dig Up"
+    if def_id_matches(def_id, df_021_quagsire::SET, df_021_quagsire::NUMBER)
+        && power_name == "Dig Up"
     {
         return Some("DF-21:Dig Up".to_string());
     }
@@ -215,13 +317,19 @@ pub fn power_effect_id(def_id: &CardDefId, power_name: &str) -> Option<String> {
     {
         return Some("DF-23:Tropical Heal".to_string());
     }
-    if def_id_matches(def_id, df_093_gardevoir_ex::SET, df_093_gardevoir_ex::NUMBER)
-        && power_name == "Imprison"
+    if def_id_matches(
+        def_id,
+        df_093_gardevoir_ex::SET,
+        df_093_gardevoir_ex::NUMBER,
+    ) && power_name == "Imprison"
     {
         return Some("DF-93:Imprison".to_string());
     }
-    if def_id_matches(def_id, df_098_salamence_ex::SET, df_098_salamence_ex::NUMBER)
-        && power_name == "Type Shift"
+    if def_id_matches(
+        def_id,
+        df_098_salamence_ex::SET,
+        df_098_salamence_ex::NUMBER,
+    ) && power_name == "Type Shift"
     {
         return Some("DF-98:Type Shift".to_string());
     }
@@ -272,10 +380,16 @@ pub fn power_is_once_per_turn(def_id: &CardDefId, power_name: &str) -> bool {
             && power_name == "Dig Up")
         || (def_id_matches(def_id, df_005_milotic::SET, df_005_milotic::NUMBER)
             && power_name == "Sharing")
-        || (def_id_matches(def_id, df_093_gardevoir_ex::SET, df_093_gardevoir_ex::NUMBER)
-            && power_name == "Imprison")
-        || (def_id_matches(def_id, df_098_salamence_ex::SET, df_098_salamence_ex::NUMBER)
-            && power_name == "Type Shift")
+        || (def_id_matches(
+            def_id,
+            df_093_gardevoir_ex::SET,
+            df_093_gardevoir_ex::NUMBER,
+        ) && power_name == "Imprison")
+        || (def_id_matches(
+            def_id,
+            df_098_salamence_ex::SET,
+            df_098_salamence_ex::NUMBER,
+        ) && power_name == "Type Shift")
         || (def_id_matches(def_id, df_008_ninetales::SET, df_008_ninetales::NUMBER)
             && power_name == "Volunteer")
         || (def_id_matches(def_id, df_029_electabuzz::SET, df_029_electabuzz::NUMBER)
@@ -319,9 +433,7 @@ pub fn resolve_custom_prompt(
         "DF-12:Shady Move" => df_012_typhlosion::resolve_shady_move(game, target_ids),
         "DF-8:Volunteer" => df_008_ninetales::resolve_volunteer(game, source_id, target_ids),
         "DF-90:Extra Boost" => df_090_altaria_ex::resolve_extra_boost(game, source_id, target_ids),
-        "DF-95:Fellow Boost" => {
-            df_095_latias_ex::resolve_fellow_boost(game, source_id, target_ids)
-        }
+        "DF-95:Fellow Boost" => df_095_latias_ex::resolve_fellow_boost(game, source_id, target_ids),
         "DF-6:Dark Horn" => df_006_nidoking::resolve_dark_horn(game, source_id, target_ids),
         "DF-6:Dark Horn:Bench" => {
             df_006_nidoking::resolve_dark_horn_bench(game, source_id, target_ids)
@@ -343,9 +455,7 @@ pub fn resolve_custom_prompt(
         "DF-100:Rotating Claws:Discard" => {
             df_100_charizard_star::resolve_rotating_claws_discard(game, source_id, target_ids)
         }
-        "DF-100:Rotating Claws" => {
-            df_100_charizard_star::resolve_rotating_claws(game, source_id)
-        }
+        "DF-100:Rotating Claws" => df_100_charizard_star::resolve_rotating_claws(game, source_id),
         "DF-101:Mimicry:Target" => {
             df_101_mew_star::resolve_mimicry_target(game, source_id, target_ids)
         }

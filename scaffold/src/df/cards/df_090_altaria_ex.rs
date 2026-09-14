@@ -18,9 +18,8 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 90;
 pub const NAME: &str = "Altaria ex δ";
 
-use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination, Stage};
 use crate::df::helpers::owner_for_source;
-
+use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination, Stage};
 
 pub fn execute_extra_boost(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let owner = match owner_for_source(game, source_id) {
@@ -62,11 +61,16 @@ pub fn execute_extra_boost(game: &mut GameState, source_id: CardInstanceId) -> b
         min: Some(1),
         max: Some(1),
         return_to_deck: false,
-    destination: SelectionDestination::default(),
-    valid_targets: Vec::new(),
-    effect_description: String::new(),
+        destination: SelectionDestination::default(),
+        valid_targets: Vec::new(),
+        effect_description: String::new(),
     };
-    game.set_pending_prompt_custom(prompt, owner, "DF-90:Extra Boost".to_string(), Some(source_id));
+    game.set_pending_prompt_custom(
+        prompt,
+        owner,
+        "DF-90:Extra Boost".to_string(),
+        Some(source_id),
+    );
     true
 }
 
@@ -75,7 +79,13 @@ pub fn resolve_extra_boost(
     source_id: Option<CardInstanceId>,
     target_ids: &[CardInstanceId],
 ) -> bool {
-    crate::df::helpers::resolve_boost_attach(game, source_id, target_ids, crate::df::helpers::BoostTarget::Stage2Ex, true)
+    crate::df::helpers::resolve_boost_attach(
+        game,
+        source_id,
+        target_ids,
+        crate::df::helpers::BoostTarget::Stage2Ex,
+        true,
+    )
 }
 
 #[cfg(test)]

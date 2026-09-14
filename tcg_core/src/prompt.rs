@@ -36,8 +36,14 @@ fn default_shuffle() -> bool {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Prompt {
-    ChooseStartingActive { options: Vec<CardInstanceId> },
-    ChooseBenchBasics { options: Vec<CardInstanceId>, min: usize, max: usize },
+    ChooseStartingActive {
+        options: Vec<CardInstanceId>,
+    },
+    ChooseBenchBasics {
+        options: Vec<CardInstanceId>,
+        min: usize,
+        max: usize,
+    },
     ChooseAttack {
         attacks: Vec<Attack>,
         #[serde(default)]
@@ -116,6 +122,11 @@ pub enum Prompt {
         valid_targets: Vec<CardInstanceId>,
         #[serde(default)]
         effect_description: String,
+    },
+    /// Select a card from a hand for inspection/copying without moving it.
+    ChooseCardFromHand {
+        player: PlayerId,
+        options: Vec<CardInstanceId>,
     },
     ChooseCardsInPlay {
         player: PlayerId,

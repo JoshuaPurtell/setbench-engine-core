@@ -18,7 +18,6 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 48;
 pub const NAME: &str = "Elekid δ";
 
-
 use tcg_core::{CardInstanceId, GameState};
 
 pub fn execute_baby_evolution(game: &mut GameState, source_id: CardInstanceId) -> bool {

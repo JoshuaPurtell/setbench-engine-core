@@ -3,11 +3,11 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use crate::ids::{CardInstanceId, PlayerId};
-use crate::Attack;
 use crate::markers::Marker;
 use crate::types::{Resistance, Stage, Type, Weakness};
-use tcg_rules_ex::SpecialCondition;
 use crate::zone::{CardInstance, Zone};
+use crate::Attack;
+use tcg_rules_ex::SpecialCondition;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PokemonSlot {
@@ -207,11 +207,7 @@ impl PlayerState {
     }
 
     pub fn deck_order(&self) -> Vec<u64> {
-        self.deck
-            .order()
-            .into_iter()
-            .map(|id| id.value())
-            .collect()
+        self.deck.order().into_iter().map(|id| id.value()).collect()
     }
 
     pub fn reset_turn_counters(&mut self) {

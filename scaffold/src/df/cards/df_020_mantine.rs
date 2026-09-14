@@ -17,9 +17,8 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 20;
 pub const NAME: &str = "Mantine δ";
 
-use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 use crate::df::helpers::owner_for_source;
-
+use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 
 pub fn execute_power_circulation(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let owner = match owner_for_source(game, source_id) {
@@ -52,7 +51,7 @@ pub fn execute_power_circulation(game: &mut GameState, source_id: CardInstanceId
         min: Some(1),
         max: Some(1),
         destination: SelectionDestination::DeckTop,
-    effect_description: String::new(),
+        effect_description: String::new(),
     };
     game.set_pending_prompt_custom(
         prompt,

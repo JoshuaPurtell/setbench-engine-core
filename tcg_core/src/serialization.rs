@@ -6,7 +6,9 @@ use rand_chacha::ChaCha8Rng;
 
 use crate::card_meta::CardMetaMap;
 use crate::event::GameEvent;
-use crate::game::{PendingAttachFromDiscard, PendingMoveEnergy, PendingPrompt, Turn, ToolDiscardSchedule};
+use crate::game::{
+    PendingAttachFromDiscard, PendingMoveEnergy, PendingPrompt, ToolDiscardSchedule, Turn,
+};
 use crate::ids::PlayerId;
 use crate::modifiers::{DamageModifierEntry, StatModifierEntry};
 use crate::player::{PlayerState, PokemonSlot};
@@ -148,7 +150,10 @@ impl GameState {
     }
 
     pub fn from_snapshot(snapshot: GameStateSnapshot) -> Result<Self, SnapshotError> {
-        if snapshot.version != GAME_STATE_VERSION && snapshot.version != 15 && snapshot.version != 14 {
+        if snapshot.version != GAME_STATE_VERSION
+            && snapshot.version != 15
+            && snapshot.version != 14
+        {
             return Err(SnapshotError::UnsupportedVersion(snapshot.version));
         }
         let setup_steps = if snapshot.version == 14 {

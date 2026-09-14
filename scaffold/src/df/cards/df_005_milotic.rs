@@ -73,9 +73,9 @@ pub fn execute_sharing(game: &mut GameState, source_id: CardInstanceId) -> bool 
         min: Some(0),
         max: Some(1),
         return_to_deck: false,
-    destination: SelectionDestination::default(),
-    valid_targets: Vec::new(),
-    effect_description: String::new(),
+        destination: SelectionDestination::default(),
+        valid_targets: Vec::new(),
+        effect_description: String::new(),
     };
     game.set_pending_prompt_custom(prompt, owner, sharing_effect_id(), Some(source_id));
     true
@@ -161,7 +161,10 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[0].bench.iter().any(|slot| slot.card.id == card_id)
+        || game.players[0]
+            .bench
+            .iter()
+            .any(|slot| slot.card.id == card_id)
     {
         return Some(PlayerId::P1);
     }
@@ -171,7 +174,10 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[1].bench.iter().any(|slot| slot.card.id == card_id)
+        || game.players[1]
+            .bench
+            .iter()
+            .any(|slot| slot.card.id == card_id)
     {
         return Some(PlayerId::P2);
     }

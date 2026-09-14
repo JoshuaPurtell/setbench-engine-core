@@ -18,9 +18,8 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 18;
 pub const NAME: &str = "Ledian δ";
 
-use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 use crate::df::helpers::owner_for_source;
-
+use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 
 pub fn execute_prowl(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let (player, player_state) = match owner_for_source(game, source_id) {
@@ -28,7 +27,12 @@ pub fn execute_prowl(game: &mut GameState, source_id: CardInstanceId) -> bool {
         Some(PlayerId::P2) => (PlayerId::P2, &mut game.players[1]),
         None => return false,
     };
-    let options: Vec<_> = player_state.deck.cards().iter().map(|card| card.id).collect();
+    let options: Vec<_> = player_state
+        .deck
+        .cards()
+        .iter()
+        .map(|card| card.id)
+        .collect();
     if options.is_empty() {
         return false;
     }
@@ -47,9 +51,8 @@ pub fn execute_prowl(game: &mut GameState, source_id: CardInstanceId) -> bool {
     true
 }
 
-
-use tcg_core::{PokemonSlot, TriggerKind, TriggerPredicate, TriggerSubscription};
 use tcg_core::runtime_hooks::def_id_matches;
+use tcg_core::{PokemonSlot, TriggerKind, TriggerPredicate, TriggerSubscription};
 
 pub fn register_triggers(game: &mut GameState, slot: &PokemonSlot) {
     if !def_id_matches(&slot.card.def_id, SET, NUMBER) {

@@ -18,11 +18,10 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 99;
 pub const NAME: &str = "Tyranitar ex δ";
 
-
+use crate::df::helpers::owner_for_source;
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::{Attack, CardInstanceId, GameState, Stage};
 use tcg_core::{PlayerId, Prompt};
-use crate::df::helpers::owner_for_source;
 
 pub fn attack_overrides(
     game: &GameState,
@@ -45,7 +44,6 @@ pub fn attack_overrides(
     }
     overrides
 }
-
 
 pub fn execute_shock_wave(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let player = match owner_for_source(game, source_id) {

@@ -226,7 +226,9 @@ pub fn check_knockout_for_with_cause(
     let meta = game.get_card_meta(&knocked_out.card.def_id);
     let is_ex = knocked_out.is_ex || meta.is_some_and(|m| m.is_ex);
     let is_star = knocked_out.is_star || meta.is_some_and(|m| m.is_star);
-    let prize_count = if is_ex {
+    let prize_count = if meta.is_some_and(|m| !m.is_pokemon) {
+        0
+    } else if is_ex {
         game.rules.prize_for_pokemon_ex_ko()
     } else if is_star {
         game.rules.prize_for_pokemon_star_ko()
@@ -240,10 +242,11 @@ pub fn check_knockout_for_with_cause(
         game.players[knocked_index].discard.add(energy);
     }
     if let Some(tool) = knocked_out.attached_tool.take() {
-        game.pending_broadcast_events.push(crate::GameEvent::ToolDiscarded {
-            player: tool.owner,
-            tool_id: tool.id,
-        });
+        game.pending_broadcast_events
+            .push(crate::GameEvent::ToolDiscarded {
+                player: tool.owner,
+                tool_id: tool.id,
+            });
         game.players[knocked_index].discard.add(tool);
     }
     // Lower evolution stages leave play with the Knocked Out Pokémon.
@@ -344,7 +347,10 @@ fn knockout_pokemon_by_id(
 
     let was_active = game.players[knocked_index].is_active(target_id);
     let mut knocked_out = if was_active {
-        game.players[knocked_index].active.take().expect("knocked out active")
+        game.players[knocked_index]
+            .active
+            .take()
+            .expect("knocked out active")
     } else {
         let pos = game.players[knocked_index]
             .bench
@@ -357,7 +363,9 @@ fn knockout_pokemon_by_id(
     let meta = game.get_card_meta(&knocked_out.card.def_id);
     let is_ex = knocked_out.is_ex || meta.is_some_and(|m| m.is_ex);
     let is_star = knocked_out.is_star || meta.is_some_and(|m| m.is_star);
-    let prize_count = if is_ex {
+    let prize_count = if meta.is_some_and(|m| !m.is_pokemon) {
+        0
+    } else if is_ex {
         game.rules.prize_for_pokemon_ex_ko()
     } else if is_star {
         game.rules.prize_for_pokemon_star_ko()
@@ -371,10 +379,11 @@ fn knockout_pokemon_by_id(
         game.players[knocked_index].discard.add(energy);
     }
     if let Some(tool) = knocked_out.attached_tool.take() {
-        game.pending_broadcast_events.push(crate::GameEvent::ToolDiscarded {
-            player: tool.owner,
-            tool_id: tool.id,
-        });
+        game.pending_broadcast_events
+            .push(crate::GameEvent::ToolDiscarded {
+                player: tool.owner,
+                tool_id: tool.id,
+            });
         game.players[knocked_index].discard.add(tool);
     }
     // Lower evolution stages leave play with the Knocked Out Pokémon.
@@ -482,14 +491,14 @@ mod tests {
             name: "Blaze".to_string(),
             damage: 20,
             attack_type: Type::Fire,
-            cost: AttackCost { total_energy: 1 , types: Vec::new() },
+            cost: AttackCost {
+                total_energy: 1,
+                types: Vec::new(),
+            },
             effect_ast: None,
         };
         execute_attack(&mut game, &attack).unwrap();
-        assert_eq!(
-            game.players[1].active.as_ref().unwrap().damage_counters,
-            2
-        );
+        assert_eq!(game.players[1].active.as_ref().unwrap().damage_counters, 2);
     }
 
     #[test]
@@ -516,14 +525,14 @@ mod tests {
             name: "Flare".to_string(),
             damage: 30,
             attack_type: Type::Fire,
-            cost: AttackCost { total_energy: 1 , types: Vec::new() },
+            cost: AttackCost {
+                total_energy: 1,
+                types: Vec::new(),
+            },
             effect_ast: None,
         };
         execute_attack(&mut game, &attack).unwrap();
-        assert_eq!(
-            game.players[1].active.as_ref().unwrap().damage_counters,
-            4
-        );
+        assert_eq!(game.players[1].active.as_ref().unwrap().damage_counters, 4);
     }
 
     #[test]

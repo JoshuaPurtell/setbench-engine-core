@@ -18,9 +18,8 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 6;
 pub const NAME: &str = "Nidoking δ";
 
-use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 use crate::df::helpers::owner_for_source;
-
+use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 
 pub fn execute_dark_horn(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let player = match owner_for_source(game, source_id) {
@@ -61,11 +60,16 @@ pub fn execute_dark_horn(game: &mut GameState, source_id: CardInstanceId) -> boo
         min: Some(0),
         max: Some(1),
         return_to_deck: false,
-    destination: SelectionDestination::default(),
-    valid_targets: Vec::new(),
-    effect_description: String::new(),
+        destination: SelectionDestination::default(),
+        valid_targets: Vec::new(),
+        effect_description: String::new(),
     };
-    game.set_pending_prompt_custom(prompt, player, "DF-6:Dark Horn".to_string(), Some(source_id));
+    game.set_pending_prompt_custom(
+        prompt,
+        player,
+        "DF-6:Dark Horn".to_string(),
+        Some(source_id),
+    );
     true
 }
 

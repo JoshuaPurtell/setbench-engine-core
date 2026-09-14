@@ -17,9 +17,11 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 14;
 pub const NAME: &str = "Cloyster δ";
 
-use tcg_core::{AttackSelector, GameState, PlayerId, PokemonSelector, PokemonSlot, StatModifierEntry, StatModifierKind, StatModifierValue};
 use crate::df::helpers::owner_for_source;
-
+use tcg_core::{
+    AttackSelector, GameState, PlayerId, PokemonSelector, PokemonSlot, StatModifierEntry,
+    StatModifierKind, StatModifierValue,
+};
 
 pub fn apply_bench_damage_prevention(game: &mut GameState, slot: &PokemonSlot) {
     let owner = match owner_for_source(game, slot.card.id) {
@@ -49,7 +51,6 @@ pub fn apply_bench_damage_prevention(game: &mut GameState, slot: &PokemonSlot) {
     });
     game.add_stat_modifier(modifier);
 }
-
 
 use tcg_core::runtime_hooks::def_id_matches;
 

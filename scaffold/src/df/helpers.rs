@@ -96,7 +96,6 @@ pub fn player_has_card(
         .any(|slot| tcg_core::runtime_hooks::def_id_matches(&slot.card.def_id, set, number))
 }
 
-
 use tcg_core::{Attack, CardDefId, EffectAst, Prompt, SelectionDestination, Stage};
 use tcg_rules_ex::Phase;
 
@@ -122,7 +121,11 @@ pub fn resolve_copied_attack(
         Some(meta) => meta.clone(),
         None => return false,
     };
-    let attack = match meta.attacks.iter().find(|attack| attack.name == attack_name) {
+    let attack = match meta
+        .attacks
+        .iter()
+        .find(|attack| attack.name == attack_name)
+    {
         Some(attack) => attack.clone(),
         None => return false,
     };
@@ -147,12 +150,8 @@ pub fn perform_copied_attack(
     };
     let mut attack_override = attack.clone();
     attack_override.attack_type = game.attack_type_for(source_id, &attack_override);
-    let overrides = tcg_core::apply_attack_overrides(
-        game,
-        &attack_override,
-        source_id,
-        defender_id,
-    );
+    let overrides =
+        tcg_core::apply_attack_overrides(game, &attack_override, source_id, defender_id);
     if !overrides.prevent_damage && overrides.damage_modifier != 0 {
         game.add_damage_modifier(overrides.damage_modifier);
     }
@@ -192,12 +191,7 @@ pub fn perform_copied_attack(
                 }
             }
         }
-        tcg_core::apply_post_attack_custom(
-            game,
-            source_id,
-            defender_id,
-            damage,
-        );
+        tcg_core::apply_post_attack_custom(game, source_id, defender_id, damage);
     }
     tcg_core::after_attack(game, source_id, defender_id);
     true
@@ -324,9 +318,9 @@ pub fn execute_baby_evolution(game: &mut GameState, source_id: CardInstanceId) -
         min: Some(0),
         max: Some(1),
         return_to_deck: false,
-    destination: SelectionDestination::default(),
-    valid_targets: Vec::new(),
-    effect_description: String::new(),
+        destination: SelectionDestination::default(),
+        valid_targets: Vec::new(),
+        effect_description: String::new(),
     };
     let effect_id = format!("{}:Baby Evolution", card_def_id_for_source(game, source_id));
     game.set_pending_prompt_custom(prompt, owner, effect_id, Some(source_id));

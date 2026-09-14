@@ -11,6 +11,8 @@ pub fn create() -> RuntimeHooks {
         attack_overrides: runtime::attack_overrides,
         attack_cost_modifier: runtime::attack_cost_modifier,
         post_attack: runtime::post_attack,
+        before_damage: |_, _, _, _| false,
+        after_retreat: |_, _, _, _| {},
         between_turns: runtime::between_turns,
         execute_power: runtime::execute_power,
         register_triggers: runtime::register_triggers,

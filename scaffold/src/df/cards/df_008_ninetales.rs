@@ -10,8 +10,8 @@
 //! If you do, put 4 damage counters on Ninetales. Then, shuffle Ninetales and
 //! all cards attached to it into your deck.
 
-use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination, TriggerEvent};
 use tcg_core::runtime_hooks::def_id_matches;
+use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination, TriggerEvent};
 
 /// Card identifiers
 pub const SET: &str = "DF";
@@ -174,7 +174,10 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[0].bench.iter().any(|slot| slot.card.id == card_id)
+        || game.players[0]
+            .bench
+            .iter()
+            .any(|slot| slot.card.id == card_id)
     {
         return Some(PlayerId::P1);
     }
@@ -184,7 +187,10 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[1].bench.iter().any(|slot| slot.card.id == card_id)
+        || game.players[1]
+            .bench
+            .iter()
+            .any(|slot| slot.card.id == card_id)
     {
         return Some(PlayerId::P2);
     }

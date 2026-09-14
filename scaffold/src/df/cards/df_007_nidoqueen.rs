@@ -13,8 +13,8 @@
 //! Does 40 damage plus 10 more damage for each Pokemon in your discard pile.
 //! You can't add more than 60 damage in this way.
 
-use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 use crate::df::helpers::count_pokemon_in_discard;
+use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 
 /// Card identifiers
 pub const SET: &str = "DF";
@@ -107,7 +107,10 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<(PlayerId, us
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[0].bench.iter().any(|slot| slot.card.id == card_id)
+        || game.players[0]
+            .bench
+            .iter()
+            .any(|slot| slot.card.id == card_id)
     {
         return Some((PlayerId::P1, 0));
     }
@@ -118,7 +121,10 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<(PlayerId, us
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[1].bench.iter().any(|slot| slot.card.id == card_id)
+        || game.players[1]
+            .bench
+            .iter()
+            .any(|slot| slot.card.id == card_id)
     {
         return Some((PlayerId::P2, 1));
     }
@@ -129,7 +135,6 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<(PlayerId, us
 // ============================================================================
 // Tests
 // ============================================================================
-
 
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::Attack;

@@ -12,10 +12,9 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 65;
 pub const NAME: &str = "Swablu δ";
 
-
+use crate::df::helpers::count_total_energy;
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::{Attack, CardInstanceId, GameState};
-use crate::df::helpers::count_total_energy;
 
 pub fn attack_overrides(
     game: &GameState,

@@ -53,8 +53,6 @@ pub fn armor_damage_reduction(
 // Tests
 // ============================================================================
 
-
-
 use crate::df::helpers::body_active;
 
 pub fn attack_overrides(
@@ -64,11 +62,8 @@ pub fn attack_overrides(
     defender_id: CardInstanceId,
 ) -> AttackOverrides {
     let mut overrides = AttackOverrides::default();
-    overrides.damage_modifier += armor_damage_reduction(
-        game,
-        defender_id,
-        body_active(game, defender_id),
-    );
+    overrides.damage_modifier +=
+        armor_damage_reduction(game, defender_id, body_active(game, defender_id));
     overrides
 }
 

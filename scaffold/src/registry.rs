@@ -87,6 +87,8 @@ fn composed<const M: u8>() -> RuntimeHooks {
         attack_cost_modifier: attack_cost_modifier::<M>,
         retreat_cost_override: retreat_cost_override::<M>,
         post_attack: post_attack::<M>,
+        before_damage: before_damage::<M>,
+        after_retreat: after_retreat::<M>,
         between_turns: between_turns::<M>,
         execute_power: execute_power::<M>,
         register_triggers: register_triggers::<M>,
@@ -159,6 +161,26 @@ fn post_attack<const M: u8>(
 ) {
     for (_, hooks) in loaded::<M>() {
         (hooks.post_attack)(game, attacker_id, defender_id, damage);
+    }
+}
+
+fn before_damage<const M: u8>(
+    game: &mut GameState,
+    attack: &Attack,
+    attacker_id: CardInstanceId,
+    defender_id: CardInstanceId,
+) -> bool {
+    loaded::<M>().any(|(_, hooks)| (hooks.before_damage)(game, attack, attacker_id, defender_id))
+}
+
+fn after_retreat<const M: u8>(
+    game: &mut GameState,
+    player: PlayerId,
+    pokemon_id: CardInstanceId,
+    remaining_hp: u16,
+) {
+    for (_, hooks) in loaded::<M>() {
+        (hooks.after_retreat)(game, player, pokemon_id, remaining_hp);
     }
 }
 

@@ -4,8 +4,8 @@
 
 use tcg_core::runtime_hooks::AttackOverrides;
 use tcg_core::{
-    Attack, CardDefId, CardInstance, CardInstanceId, EnergyAttachmentSource,
-    GameState, PlayerId, PokemonSlot, Type,
+    Attack, CardDefId, CardInstance, CardInstanceId, EnergyAttachmentSource, GameState, PlayerId,
+    PokemonSlot, Type,
 };
 
 pub fn attack_overrides(
@@ -17,7 +17,11 @@ pub fn attack_overrides(
     AttackOverrides::default()
 }
 
-pub fn attack_cost_modifier(_game: &GameState, _attacker_id: CardInstanceId, _attack: &Attack) -> i32 {
+pub fn attack_cost_modifier(
+    _game: &GameState,
+    _attacker_id: CardInstanceId,
+    _attack: &Attack,
+) -> i32 {
     0
 }
 
@@ -29,18 +33,15 @@ pub fn post_attack(
 ) {
 }
 
-pub fn between_turns(_game: &mut GameState) {
-}
+pub fn between_turns(_game: &mut GameState) {}
 
 pub fn execute_power(_game: &mut GameState, _power_name: &str, _source_id: CardInstanceId) -> bool {
     false
 }
 
-pub fn register_triggers(_game: &mut GameState, _slot: &PokemonSlot) {
-}
+pub fn register_triggers(_game: &mut GameState, _slot: &PokemonSlot) {}
 
-pub fn apply_tool_stadium_effects(_game: &mut GameState) {
-}
+pub fn apply_tool_stadium_effects(_game: &mut GameState) {}
 
 pub fn can_attach_tool(
     _game: &GameState,
@@ -51,7 +52,11 @@ pub fn can_attach_tool(
     true
 }
 
-pub fn on_tool_attached(_game: &mut GameState, _tool_id: CardInstanceId, _target_id: CardInstanceId) {
+pub fn on_tool_attached(
+    _game: &mut GameState,
+    _tool_id: CardInstanceId,
+    _target_id: CardInstanceId,
+) {
 }
 
 pub fn energy_provides_override(_game: &GameState, _card: &CardInstance) -> Option<Vec<Type>> {
@@ -66,7 +71,11 @@ pub fn on_energy_attached(
 ) {
 }
 
-pub fn after_attack(_game: &mut GameState, _attacker_id: CardInstanceId, _defender_id: CardInstanceId) {
+pub fn after_attack(
+    _game: &mut GameState,
+    _attacker_id: CardInstanceId,
+    _defender_id: CardInstanceId,
+) {
 }
 
 pub fn can_use_pokepower_override(

@@ -21,11 +21,12 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 98;
 pub const NAME: &str = "Salamence ex δ";
 
-
+use crate::df::helpers::owner_for_source;
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::{Attack, CardInstanceId, GameState};
-use tcg_core::{Marker, PlayerId, Prompt, StatModifierEntry, StatModifierKind, StatModifierValue, Type};
-use crate::df::helpers::owner_for_source;
+use tcg_core::{
+    Marker, PlayerId, Prompt, StatModifierEntry, StatModifierKind, StatModifierValue, Type,
+};
 
 pub fn attack_overrides(
     game: &GameState,
@@ -45,7 +46,6 @@ pub fn attack_overrides(
     }
     overrides
 }
-
 
 pub fn execute_dual_stream(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let player = match owner_for_source(game, source_id) {
@@ -106,8 +106,11 @@ pub fn execute_type_shift(game: &mut GameState, source_id: CardInstanceId) -> bo
     true
 }
 
-
-pub fn after_attack(game: &mut GameState, attacker_id: CardInstanceId, _defender_id: CardInstanceId) {
+pub fn after_attack(
+    game: &mut GameState,
+    attacker_id: CardInstanceId,
+    _defender_id: CardInstanceId,
+) {
     game.remove_marker(attacker_id, "Dual Stream Reduced");
 }
 

@@ -17,12 +17,11 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 23;
 pub const NAME: &str = "Tropius δ";
 
-
-use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
-use tcg_core::{Attack, CardInstanceId, GameState};
 use crate::df::helpers::count_total_energy;
-use tcg_core::PlayerId;
 use crate::df::helpers::owner_for_source;
+use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
+use tcg_core::PlayerId;
+use tcg_core::{Attack, CardInstanceId, GameState};
 
 pub fn attack_overrides(
     game: &GameState,
@@ -43,7 +42,6 @@ pub fn attack_overrides(
     }
     overrides
 }
-
 
 pub fn execute_tropical_heal(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let owner = match owner_for_source(game, source_id) {
@@ -69,7 +67,6 @@ pub fn execute_tropical_heal(game: &mut GameState, source_id: CardInstanceId) ->
     }
     true
 }
-
 
 use tcg_core::{PokemonSlot, TriggerKind, TriggerPredicate, TriggerSubscription};
 

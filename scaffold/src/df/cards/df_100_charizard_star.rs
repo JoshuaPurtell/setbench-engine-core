@@ -16,9 +16,8 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 100;
 pub const NAME: &str = "Charizard ★ δ";
 
-use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 use crate::df::helpers::owner_for_source;
-
+use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
 
 pub fn execute_rotating_claws(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let player = match owner_for_source(game, source_id) {
@@ -41,9 +40,9 @@ pub fn execute_rotating_claws(game: &mut GameState, source_id: CardInstanceId) -
         pokemon_id: source_id,
         count: 1,
         min: Some(0),
-    target_id: None,
-    options: Vec::new(),
-    destination: SelectionDestination::default(),
+        target_id: None,
+        options: Vec::new(),
+        destination: SelectionDestination::default(),
     };
     game.set_pending_prompt_custom(
         prompt,
@@ -110,7 +109,7 @@ pub fn resolve_rotating_claws_discard(
         min: Some(1),
         max: Some(1),
         destination: SelectionDestination::Discard,
-    effect_description: String::new(),
+        effect_description: String::new(),
     };
     let effect_id = format!("DF-100:Rotating Claws:Energy:{}", discarded.id.value());
     game.set_pending_prompt_custom(prompt, player, effect_id, Some(source_id));
