@@ -12,6 +12,8 @@ pub fn create() -> RuntimeHooks {
         attack_overrides,
         attack_cost_modifier: cards::attack_cost_modifier,
         post_attack: cards::post_attack,
+        before_damage: |_, _, _, _| false,
+        after_retreat: |_, _, _, _| {},
         between_turns: cards::between_turns,
         execute_power: cards::execute_power,
         register_triggers: cards::register_triggers,

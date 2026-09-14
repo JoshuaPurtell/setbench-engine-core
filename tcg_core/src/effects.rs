@@ -170,6 +170,10 @@ pub enum EffectAst {
         player: TargetPlayer,
         count: u32,
     },
+    PlayTrainerAsPokemon {
+        hp: u16,
+        pokemon_type: Type,
+    },
     DevolvePokemon {
         target: Target,
         #[serde(default)]
@@ -1144,6 +1148,30 @@ pub fn execute_effect_with_source_and_targets(
             }
             Ok(EffectOutcome::Applied)
         }
+        EffectAst::PlayTrainerAsPokemon { hp, pokemon_type } => {
+            let Some(card) = game.pending_trainer.take() else {
+                return Err(EffectError::InvalidCardType);
+            };
+            let owner = card.owner;
+            let index = if owner == PlayerId::P1 { 0 } else { 1 };
+            if game.players[index].bench.len() >= 5 {
+                game.pending_trainer = Some(card);
+                return Err(EffectError::BenchFull);
+            }
+            let id = card.id;
+            let mut slot = crate::PokemonSlot::new(card);
+            slot.hp = *hp;
+            slot.types = vec![*pokemon_type];
+            slot.stage = Stage::Basic;
+            game.players[index].bench.push(slot);
+            if let Some(slot) = game.players[index].bench.last().cloned() {
+                crate::custom_abilities::register_card_triggers(game, &slot);
+            }
+            let mut marker = crate::Marker::new("CannotRetreat");
+            marker.expires_after_turn = None;
+            let _ = game.add_marker(id, marker);
+            Ok(EffectOutcome::Applied)
+        }
         EffectAst::DevolvePokemon {
             target,
             heal_counters,
@@ -1646,6 +1674,7 @@ pub fn execute_effect_with_source_and_targets(
                 }
                 target.bench.push(outgoing_active);
             }
+            crate::apply_tool_stadium_effects(game);
             Ok(EffectOutcome::Applied)
         }
         EffectAst::SwitchToTarget { player } => {
@@ -1679,6 +1708,7 @@ pub fn execute_effect_with_source_and_targets(
                 }
                 player_state.bench.push(outgoing_active);
             }
+            crate::apply_tool_stadium_effects(game);
             Ok(EffectOutcome::Applied)
         }
         EffectAst::RevealHand { player } => {

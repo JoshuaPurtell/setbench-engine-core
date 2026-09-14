@@ -9,6 +9,7 @@ pub enum RestrictionKind {
     UseBody,
     AttachEnergy,
     Retreat,
+    Evolve,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

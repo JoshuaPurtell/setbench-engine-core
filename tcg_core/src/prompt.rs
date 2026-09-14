@@ -117,6 +117,11 @@ pub enum Prompt {
         #[serde(default)]
         effect_description: String,
     },
+    /// Select a card from a hand for inspection/copying without moving it.
+    ChooseCardFromHand {
+        player: PlayerId,
+        options: Vec<CardInstanceId>,
+    },
     ChooseCardsInPlay {
         player: PlayerId,
         options: Vec<CardInstanceId>,

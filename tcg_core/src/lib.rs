@@ -87,6 +87,8 @@ pub use custom_abilities::{
     apply_attack_overrides,
     apply_between_turns_custom,
     apply_post_attack_custom,
+    before_damage,
+    after_retreat,
     apply_tool_stadium_effects,
     can_attach_tool,
     on_tool_attached,

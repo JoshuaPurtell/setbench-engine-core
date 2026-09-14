@@ -2972,6 +2972,33 @@ impl GameState {
         slot
     }
 
+    /// Replace a resolving copy effect with a normal attack declaration by the
+    /// current Active Pokemon. The supplied attack should already contain any
+    /// copied-cost or copied-type adjustments required by the card effect.
+    pub fn execute_copied_attack(
+        &mut self,
+        source_id: crate::ids::CardInstanceId,
+        attack: crate::Attack,
+    ) -> bool {
+        self.pending_prompt = None;
+        self.pending_attack = None;
+        self.pending_custom_effect_id = None;
+        self.pending_custom_source_id = None;
+        self.pending_custom_cards.clear();
+        let Some(slot) = self.find_pokemon_slot_mut(source_id) else {
+            return false;
+        };
+        slot.attacks.push(attack.clone());
+        let attack_name = attack.name.clone();
+        let result = crate::action::execute(self, crate::Action::DeclareAttack { attack }).is_ok();
+        if let Some(slot) = self.find_pokemon_slot_mut(source_id) {
+            if slot.attacks.last().is_some_and(|known| known.name == attack_name) {
+                slot.attacks.pop();
+            }
+        }
+        result
+    }
+
     pub fn apply_card_meta_to_slot(&self, slot: &mut PokemonSlot) {
         if let Some(meta) = self.card_meta.get(&slot.card.def_id) {
             slot.is_ex = meta.is_ex;

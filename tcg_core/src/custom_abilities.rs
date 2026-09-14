@@ -42,6 +42,24 @@ pub fn apply_post_attack_custom(
     (game.hooks().post_attack)(game, attacker_id, defender_id, damage_dealt);
 }
 
+pub fn before_damage(
+    game: &mut GameState,
+    attack: &Attack,
+    attacker_id: CardInstanceId,
+    defender_id: CardInstanceId,
+) -> bool {
+    (game.hooks().before_damage)(game, attack, attacker_id, defender_id)
+}
+
+pub fn after_retreat(
+    game: &mut GameState,
+    player: crate::PlayerId,
+    pokemon_id: CardInstanceId,
+    remaining_hp: u16,
+) {
+    (game.hooks().after_retreat)(game, player, pokemon_id, remaining_hp);
+}
+
 pub fn apply_between_turns_custom(game: &mut GameState) {
     (game.hooks().between_turns)(game);
 }

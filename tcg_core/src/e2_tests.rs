@@ -123,6 +123,70 @@ fn declare(game: &mut GameState, attack: Attack) {
     game.apply_action(PlayerId::P1, Action::DeclareAttack { attack }).unwrap();
 }
 
+#[test]
+fn inspect_hand_prompt_does_not_move_the_selected_card() {
+    let mut game = new_game();
+    let card = CardInstance::new(CardDefId::new("FILL"), PlayerId::P2);
+    let card_id = card.id;
+    game.players[1].hand.add(card);
+    let mut hooks = RuntimeHooks::empty();
+    hooks.resolve_custom_prompt = |_, effect_id, _, selected| {
+        effect_id == "inspect" && selected.len() == 1
+    };
+    game.set_hooks(hooks);
+    game.set_pending_prompt_custom(
+        Prompt::ChooseCardFromHand { player: PlayerId::P2, options: vec![card_id] },
+        PlayerId::P1,
+        "inspect".to_owned(),
+        None,
+    );
+    game.apply_action(PlayerId::P1, Action::DiscardCardsFromHand { card_ids: vec![card_id] }).unwrap();
+    assert!(game.players[1].hand.contains(card_id));
+    assert!(!game.players[1].discard.contains(card_id));
+}
+
+#[test]
+fn before_damage_hook_can_reduce_a_declared_attack() {
+    let mut game = new_game();
+    game.card_meta.insert(CardDefId::new("ATK"), pokemon("Atk", vec![Type::Colorless], None, None, Stage::Basic));
+    game.card_meta.insert(CardDefId::new("DEF"), pokemon("Def", vec![Type::Colorless], None, None, Stage::Basic));
+    let attacker = put(&mut game, PlayerId::P1, "ATK", true);
+    let defender = put(&mut game, PlayerId::P2, "DEF", true);
+    let selected = attack("Selected", 30, Type::Colorless, Some(EffectAst::NoOp));
+    give_attack(&mut game, attacker, &selected);
+    let mut hooks = RuntimeHooks::empty();
+    hooks.before_damage = |game, _, _, _| { game.add_damage_modifier(-10); false };
+    game.set_hooks(hooks);
+    declare(&mut game, selected);
+    assert_eq!(counters(&game, defender), 2);
+}
+
+#[test]
+fn voluntary_retreat_runs_the_after_retreat_hook() {
+    let mut game = new_game();
+    game.card_meta.insert(CardDefId::new("MON"), pokemon("Mon", vec![Type::Colorless], None, None, Stage::Basic));
+    let outgoing = put(&mut game, PlayerId::P1, "MON", true);
+    let incoming = put(&mut game, PlayerId::P1, "MON", false);
+    game.find_pokemon_slot_mut(outgoing).unwrap().retreat_cost = 0;
+    let mut hooks = RuntimeHooks::empty();
+    hooks.after_retreat = |game, _, pokemon_id, _| { let _ = game.add_marker(pokemon_id, Marker::new("Retreated")); };
+    game.set_hooks(hooks);
+    game.apply_action(PlayerId::P1, Action::Retreat { to_bench_id: incoming }).unwrap();
+    assert!(game.has_marker(outgoing, "Retreated"));
+}
+
+#[test]
+fn copied_attack_executes_as_the_current_active_without_its_printed_cost() {
+    let mut game = new_game();
+    game.card_meta.insert(CardDefId::new("COPY"), pokemon("Copy", vec![Type::Darkness], None, None, Stage::Basic));
+    game.card_meta.insert(CardDefId::new("DEF"), pokemon("Def", vec![Type::Colorless], None, None, Stage::Basic));
+    let source = put(&mut game, PlayerId::P1, "COPY", true);
+    let defender = put(&mut game, PlayerId::P2, "DEF", true);
+    let copied = attack("Borrowed", 40, Type::Darkness, Some(EffectAst::NoOp));
+    assert!(game.execute_copied_attack(source, copied));
+    assert_eq!(counters(&game, defender), 4);
+}
+
 // 1. Preventing damage keeps the attack's other effects; effect prevention is per recipient.
 #[test]
 fn prevent_damage_keeps_other_effects_and_is_per_target() {
