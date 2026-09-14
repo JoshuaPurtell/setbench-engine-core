@@ -1738,6 +1738,22 @@ impl GameState {
         remaining_energy >= required_colorless
     }
 
+    /// Printed Energy units attached to a Pokemon after card and Stadium overrides.
+    pub fn attached_energy_units(&self, pokemon_id: crate::ids::CardInstanceId) -> usize {
+        let Some(slot) = self.slot_by_id(pokemon_id) else { return 0; };
+        slot.attached_energy.iter().map(|energy| {
+            let provides = self.energy_provides(energy);
+            let mut units = (self.hooks().energy_units)(self, pokemon_id, energy, &provides);
+            if (self.hooks().is_double_rainbow)(&energy.def_id) { units = 2; }
+            (self.hooks().energy_units_override)(self, slot, energy, units)
+        }).sum()
+    }
+
+    /// Attack currently resolving, for expansion hooks that apply named post-attack effects.
+    pub fn resolving_attack(&self) -> Option<(crate::ids::CardInstanceId, &Attack)> {
+        self.resolving_attack.as_ref().map(|(attacker, attack)| (*attacker, attack))
+    }
+
     /// Returns a list of attacks the active Pokemon can use (has enough energy for).
     pub fn get_usable_attacks(&self, player: crate::PlayerId) -> Vec<Attack> {
         let player_state = match player {

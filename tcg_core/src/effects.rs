@@ -123,6 +123,7 @@ pub enum EffectAst {
     PlaceDamageCounters { target: Target, counters: u32 },
     PlaceDamageCountersIfTargetDelta { target: Target, base: u32, delta: u32 },
     DrawCards { player: TargetPlayer, count: u32 },
+    DrawCardsUpTo { player: TargetPlayer, max: u32 },
     DrawBottomCards { player: TargetPlayer, count: u32 },
     SearchDeck { player: TargetPlayer, count: u32 },
     SearchDeckWithSelector {
@@ -931,6 +932,19 @@ pub fn execute_effect_with_source_and_targets(
             };
             let _ = game.draw_cards_with_events(target_player, count);
             Ok(EffectOutcome::Applied)
+        }
+        EffectAst::DrawCardsUpTo { player, max } => {
+            let target_player = match player {
+                TargetPlayer::Current => game.turn.player,
+                TargetPlayer::Opponent => game.turn.player.opponent(),
+            };
+            let prompt = Prompt::ChooseDrawCount {
+                player: target_player,
+                min: 0,
+                max: *max as usize,
+            };
+            game.set_pending_prompt(prompt.clone(), target_player);
+            Ok(EffectOutcome::Prompt(prompt))
         }
         EffectAst::DrawBottomCards { player, count } => {
             let target_player = match player {

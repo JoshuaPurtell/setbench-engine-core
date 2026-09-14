@@ -1016,7 +1016,15 @@ pub fn execute(game: &mut GameState, action: Action) -> Result<Vec<GameEvent>, A
             if let Some(Prompt::CoinFlipForEffect { player, .. }) = game.pending_prompt.as_ref().map(|p| &p.prompt) { game.flip_coin_for(*player); }
             Ok(Vec::new())
         }
-        Action::ChooseNumber { .. } => Ok(Vec::new()),
+        Action::ChooseNumber { number } => {
+            if let Some(Prompt::ChooseDrawCount { player, .. }) =
+                game.pending_prompt.as_ref().map(|pending| &pending.prompt)
+            {
+                let player = *player;
+                let _ = game.draw_cards_with_events(player, number);
+            }
+            Ok(Vec::new())
+        }
         Action::Draw => {
             let draw_allowed = !(game.turn.number == 0
                 && game.turn.player == crate::PlayerId::P1
