@@ -18,8 +18,9 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 64;
 pub const NAME: &str = "Smoochum δ";
 
-use crate::df::helpers::owner_for_source;
 use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt, SelectionDestination};
+use crate::df::helpers::owner_for_source;
+
 
 pub fn execute_alluring_kiss(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let player = match owner_for_source(game, source_id) {

@@ -28,11 +28,11 @@ pub struct TimerConfig {
 impl Default for TimerConfig {
     fn default() -> Self {
         Self {
-            grace_period_ms: 15_000,  // 15s grace before rope appears
-            rope_duration_ms: 30_000, // 30s visible rope (total 45s per decision)
-            turns_for_extension: 3,   // 3 fast turns = 1 extension
-            starting_extensions: 1,   // Start with 1 extension
-            max_extensions: 3,        // Cap at 3 extensions
+            grace_period_ms: 15_000,      // 15s grace before rope appears
+            rope_duration_ms: 30_000,     // 30s visible rope (total 45s per decision)
+            turns_for_extension: 3,       // 3 fast turns = 1 extension
+            starting_extensions: 1,       // Start with 1 extension
+            max_extensions: 3,            // Cap at 3 extensions
             enabled: true,
         }
     }

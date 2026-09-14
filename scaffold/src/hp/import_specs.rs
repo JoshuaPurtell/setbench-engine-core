@@ -2,8 +2,8 @@
 //!
 //! Card specs are populated as cards are implemented.
 
-use crate::{PowerBodySpec, TrainerSpec};
 use serde_json::Value;
+use crate::{PowerBodySpec, TrainerSpec};
 
 /// Holon Phantoms Poke-Powers and Poke-Bodies.
 pub const HP_POWERS: &[PowerBodySpec] = &[];

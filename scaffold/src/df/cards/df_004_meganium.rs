@@ -89,10 +89,7 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[0]
-            .bench
-            .iter()
-            .any(|slot| slot.card.id == card_id)
+        || game.players[0].bench.iter().any(|slot| slot.card.id == card_id)
     {
         return Some(PlayerId::P1);
     }
@@ -102,10 +99,7 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
         .as_ref()
         .map(|slot| slot.card.id == card_id)
         .unwrap_or(false)
-        || game.players[1]
-            .bench
-            .iter()
-            .any(|slot| slot.card.id == card_id)
+        || game.players[1].bench.iter().any(|slot| slot.card.id == card_id)
     {
         return Some(PlayerId::P2);
     }
@@ -117,8 +111,9 @@ fn find_owner(game: &GameState, card_id: CardInstanceId) -> Option<PlayerId> {
 // Tests
 // ============================================================================
 
-use tcg_core::runtime_hooks::def_id_matches;
+
 use tcg_core::{PokemonSlot, TriggerKind, TriggerPredicate, TriggerSubscription};
+use tcg_core::runtime_hooks::def_id_matches;
 
 pub fn register_triggers(game: &mut GameState, slot: &PokemonSlot) {
     if !def_id_matches(&slot.card.def_id, SET, NUMBER) {

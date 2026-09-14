@@ -1,6 +1,6 @@
 use crate::ids::CardInstanceId;
-use crate::selectors::PokemonSelector;
 use crate::PlayerId;
+use crate::selectors::PokemonSelector;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ReplacementTrigger {

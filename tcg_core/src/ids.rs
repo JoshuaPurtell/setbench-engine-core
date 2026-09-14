@@ -24,10 +24,7 @@ impl CardDefId {
         // Wrong format: {TYPE}-ENERGY -> ENERGY-{TYPE}
         if let Some((energy_type, _)) = s.rsplit_once("-ENERGY") {
             if !energy_type.is_empty() {
-                return Some(CardDefId::new(format!(
-                    "ENERGY-{}",
-                    energy_type.to_uppercase()
-                )));
+                return Some(CardDefId::new(format!("ENERGY-{}", energy_type.to_uppercase())));
             }
         }
         None
@@ -40,9 +37,7 @@ impl fmt::Display for CardDefId {
     }
 }
 
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
 pub struct CardInstanceId(u64);
 
 impl CardInstanceId {

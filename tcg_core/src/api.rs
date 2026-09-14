@@ -9,11 +9,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(
-        deck1: Vec<crate::CardInstance>,
-        deck2: Vec<crate::CardInstance>,
-        seed: u64,
-    ) -> Self {
+    pub fn new(deck1: Vec<crate::CardInstance>, deck2: Vec<crate::CardInstance>, seed: u64) -> Self {
         Self {
             state: GameState::new(deck1, deck2, seed, RulesetConfig::default()),
             winner: None,
@@ -66,11 +62,15 @@ mod tests {
         let deck2 = create_deck(60, PlayerId::P2);
         let mut game = Game::new(deck1, deck2, 12345);
 
-        let mut attacker =
-            PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-900"), PlayerId::P1));
+        let mut attacker = PokemonSlot::new(CardInstance::new(
+            CardDefId::new("TEST-900"),
+            PlayerId::P1,
+        ));
         attacker.hp = 20;
-        let mut defender =
-            PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-901"), PlayerId::P2));
+        let mut defender = PokemonSlot::new(CardInstance::new(
+            CardDefId::new("TEST-901"),
+            PlayerId::P2,
+        ));
         defender.hp = 20;
         defender.is_ex = true;
 
@@ -81,10 +81,7 @@ mod tests {
             name: "Tackle".to_string(),
             damage: 20,
             attack_type: Type::Colorless,
-            cost: AttackCost {
-                total_energy: 0,
-                types: Vec::new(),
-            },
+            cost: AttackCost { total_energy: 0 , types: Vec::new() },
             effect_ast: None,
         };
 

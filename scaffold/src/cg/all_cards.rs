@@ -2,8 +2,8 @@ use serde_json::Value;
 
 use tcg_core::runtime_hooks::AttackOverrides;
 use tcg_core::{
-    Attack, CardDefId, CardInstance, CardInstanceId, EnergyAttachmentSource, GameState, PlayerId,
-    PokemonSlot, Type,
+    Attack, CardDefId, CardInstance, CardInstanceId, EnergyAttachmentSource, GameState,
+    PlayerId, PokemonSlot, Type,
 };
 
 use crate::{PowerBodySpec, TrainerSpec};
@@ -18,7 +18,11 @@ pub fn power_effect_ast(_number: &str, _power_name: &str, _kind: &str) -> Option
     None
 }
 
-pub fn trainer_effect_ast(_number: &str, _card_name: &str, _trainer_kind: &str) -> Option<Value> {
+pub fn trainer_effect_ast(
+    _number: &str,
+    _card_name: &str,
+    _trainer_kind: &str,
+) -> Option<Value> {
     None
 }
 
@@ -35,11 +39,7 @@ pub fn attack_overrides(
     AttackOverrides::default()
 }
 
-pub fn attack_cost_modifier(
-    _game: &GameState,
-    _attacker_id: CardInstanceId,
-    _attack: &Attack,
-) -> i32 {
+pub fn attack_cost_modifier(_game: &GameState, _attacker_id: CardInstanceId, _attack: &Attack) -> i32 {
     0
 }
 
@@ -77,12 +77,7 @@ pub fn can_attach_tool(
     true
 }
 
-pub fn on_tool_attached(
-    _game: &mut GameState,
-    _tool_id: CardInstanceId,
-    _target_id: CardInstanceId,
-) {
-}
+pub fn on_tool_attached(_game: &mut GameState, _tool_id: CardInstanceId, _target_id: CardInstanceId) {}
 
 pub fn energy_provides_override(_game: &GameState, _card: &CardInstance) -> Option<Vec<Type>> {
     None
@@ -96,12 +91,7 @@ pub fn on_energy_attached(
 ) {
 }
 
-pub fn after_attack(
-    _game: &mut GameState,
-    _attacker_id: CardInstanceId,
-    _defender_id: CardInstanceId,
-) {
-}
+pub fn after_attack(_game: &mut GameState, _attacker_id: CardInstanceId, _defender_id: CardInstanceId) {}
 
 pub fn can_use_pokepower_override(
     _game: &GameState,

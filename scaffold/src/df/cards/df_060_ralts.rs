@@ -14,6 +14,7 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 60;
 pub const NAME: &str = "Ralts";
 
+
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::{Attack, CardInstanceId, GameState};
 

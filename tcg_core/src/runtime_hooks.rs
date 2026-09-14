@@ -23,8 +23,6 @@ pub struct AttackOverrides {
     pub damage_modifier: i32,
     pub pre_weakness_modifier: i32,
     pub used_body: Option<&'static str>,
-    /// Ignore damage prevention and other defensive effects on the Defending Pokemon.
-    pub ignore_defender_effects: bool,
 }
 
 impl AttackOverrides {
@@ -34,7 +32,6 @@ impl AttackOverrides {
         self.ignore_resistance |= other.ignore_resistance;
         self.damage_modifier += other.damage_modifier;
         self.pre_weakness_modifier += other.pre_weakness_modifier;
-        self.ignore_defender_effects |= other.ignore_defender_effects;
         if self.used_body.is_none() {
             self.used_body = other.used_body;
         }
@@ -48,8 +45,6 @@ pub type AttackOverridesFn =
 pub type AttackCostModifierFn = fn(&GameState, CardInstanceId, &Attack) -> i32;
 pub type RetreatCostOverrideFn = fn(&GameState, CardInstanceId, i32) -> i32;
 pub type PostAttackFn = fn(&mut GameState, CardInstanceId, CardInstanceId, u16);
-pub type BeforeDamageFn = fn(&mut GameState, &Attack, CardInstanceId, CardInstanceId) -> bool;
-pub type AfterRetreatFn = fn(&mut GameState, PlayerId, CardInstanceId, u16);
 pub type BetweenTurnsFn = fn(&mut GameState);
 pub type ExecutePowerFn = fn(&mut GameState, &str, CardInstanceId) -> bool;
 pub type RegisterTriggersFn = fn(&mut GameState, &PokemonSlot);
@@ -93,11 +88,6 @@ pub struct RuntimeHooks {
     pub retreat_cost_override: RetreatCostOverrideFn,
     /// Called after attack damage is dealt
     pub post_attack: PostAttackFn,
-    /// Called once after attacker-side pre-damage effects and before damage is calculated.
-    /// Returning true means the hook handled the opportunity (and may have opened a prompt).
-    pub before_damage: BeforeDamageFn,
-    /// Called after a player completes a voluntary retreat.
-    pub after_retreat: AfterRetreatFn,
     /// Called during between-turns phase
     pub between_turns: BetweenTurnsFn,
     /// Execute a custom Poke-Power
@@ -156,8 +146,6 @@ impl RuntimeHooks {
             attack_cost_modifier: |_, _, _| 0,
             retreat_cost_override: |_, _, base| base,
             post_attack: |_, _, _, _| {},
-            before_damage: |_, _, _, _| false,
-            after_retreat: |_, _, _, _| {},
             between_turns: |_| {},
             execute_power: |_, _, _| false,
             register_triggers: |_, _| {},

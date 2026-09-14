@@ -19,8 +19,9 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 101;
 pub const NAME: &str = "Mew ★ δ";
 
-use crate::df::helpers::owner_for_source;
 use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt};
+use crate::df::helpers::owner_for_source;
+
 
 pub fn execute_mimicry(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let player = match owner_for_source(game, source_id) {
@@ -79,11 +80,7 @@ pub fn resolve_mimicry_target(
     if slot.attacks.is_empty() {
         return true;
     }
-    let attacks = slot
-        .attacks
-        .iter()
-        .map(|attack| attack.name.clone())
-        .collect();
+    let attacks = slot.attacks.iter().map(|attack| attack.name.clone()).collect();
     let prompt = Prompt::ChoosePokemonAttack {
         player,
         pokemon_id: target_id,
@@ -142,10 +139,7 @@ pub fn execute_rainbow_wave(game: &mut GameState, source_id: CardInstanceId) -> 
         .active
         .iter()
         .chain(game.players[opponent_index].bench.iter())
-        .filter(|slot| {
-            game.effective_types_for(slot.card.id)
-                .contains(&energy_type)
-        })
+        .filter(|slot| game.effective_types_for(slot.card.id).contains(&energy_type))
         .map(|slot| slot.card.id)
         .collect();
     for target_id in targets {

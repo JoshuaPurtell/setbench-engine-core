@@ -20,11 +20,9 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 93;
 pub const NAME: &str = "Gardevoir ex δ";
 
+use tcg_core::{CardInstanceId, GameState, Marker, PlayerId, Prompt, Restriction, RestrictionKind, RestrictionTarget};
 use crate::df::helpers::owner_for_source;
-use tcg_core::{
-    CardInstanceId, GameState, Marker, PlayerId, Prompt, Restriction, RestrictionKind,
-    RestrictionTarget,
-};
+
 
 pub fn execute_imprison(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let owner = match owner_for_source(game, source_id) {

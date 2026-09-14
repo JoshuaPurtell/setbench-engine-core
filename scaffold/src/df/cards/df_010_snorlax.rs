@@ -11,8 +11,8 @@
 //! Once during your turn (before your attack), if Snorlax is your Active Pokemon,
 //! you may remove 2 damage counters from Snorlax. If you do, Snorlax is now Asleep.
 
-use tcg_core::runtime_hooks::def_id_matches;
 use tcg_core::{CardInstanceId, GameState, PlayerId};
+use tcg_core::runtime_hooks::def_id_matches;
 use tcg_rules_ex::SpecialCondition;
 
 /// Card identifiers

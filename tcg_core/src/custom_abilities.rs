@@ -4,8 +4,8 @@
 //! All implementations delegate to the hooks registered on the GameState.
 
 use crate::ids::CardInstanceId;
-use crate::types::EnergyAttachmentSource;
 use crate::{Attack, CardDefId, GameState, PokemonSlot, Type};
+use crate::types::EnergyAttachmentSource;
 
 // Re-export AttackOverrides from runtime_hooks for backwards compatibility
 pub use crate::runtime_hooks::AttackOverrides;
@@ -40,24 +40,6 @@ pub fn apply_post_attack_custom(
     damage_dealt: u16,
 ) {
     (game.hooks().post_attack)(game, attacker_id, defender_id, damage_dealt);
-}
-
-pub fn before_damage(
-    game: &mut GameState,
-    attack: &Attack,
-    attacker_id: CardInstanceId,
-    defender_id: CardInstanceId,
-) -> bool {
-    (game.hooks().before_damage)(game, attack, attacker_id, defender_id)
-}
-
-pub fn after_retreat(
-    game: &mut GameState,
-    player: crate::PlayerId,
-    pokemon_id: CardInstanceId,
-    remaining_hp: u16,
-) {
-    (game.hooks().after_retreat)(game, player, pokemon_id, remaining_hp);
 }
 
 pub fn apply_between_turns_custom(game: &mut GameState) {
@@ -134,11 +116,18 @@ pub fn can_attach_energy(
     (game.hooks().can_attach_energy)(game, player, energy_id, target_id)
 }
 
-pub fn on_tool_attached(game: &mut GameState, tool_id: CardInstanceId, target_id: CardInstanceId) {
+pub fn on_tool_attached(
+    game: &mut GameState,
+    tool_id: CardInstanceId,
+    target_id: CardInstanceId,
+) {
     (game.hooks().on_tool_attached)(game, tool_id, target_id);
 }
 
-pub fn energy_provides_override(game: &GameState, card: &crate::CardInstance) -> Option<Vec<Type>> {
+pub fn energy_provides_override(
+    game: &GameState,
+    card: &crate::CardInstance,
+) -> Option<Vec<Type>> {
     (game.hooks().energy_provides_override)(game, card)
 }
 
@@ -151,11 +140,7 @@ pub fn on_energy_attached(
     (game.hooks().on_energy_attached)(game, energy_id, target_id, source);
 }
 
-pub fn after_attack(
-    game: &mut GameState,
-    attacker_id: CardInstanceId,
-    defender_id: CardInstanceId,
-) {
+pub fn after_attack(game: &mut GameState, attacker_id: CardInstanceId, defender_id: CardInstanceId) {
     (game.hooks().after_attack)(game, attacker_id, defender_id);
 }
 
@@ -189,9 +174,7 @@ pub fn power_effect_id_for(def_id: &CardDefId, power_name: &str) -> Option<Strin
     // We use a default hooks instance for this.
     // Note: In a fully modular system, this would require passing hooks explicitly.
     // For now, we use tcg_expansions::create_hooks() equivalent logic.
-    crate::runtime_hooks::RuntimeHooks::default()
-        .power_effect_id_for
-        .clone()(def_id, power_name)
+    crate::runtime_hooks::RuntimeHooks::default().power_effect_id_for.clone()(def_id, power_name)
 }
 
 pub fn power_is_once_per_turn(def_id: &CardDefId, power_name: &str) -> bool {

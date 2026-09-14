@@ -18,11 +18,12 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 21;
 pub const NAME: &str = "Quagsire δ";
 
-use crate::df::helpers::has_any_tool;
-use crate::df::helpers::owner_for_source;
+
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::{Attack, CardInstanceId, GameState};
+use crate::df::helpers::has_any_tool;
 use tcg_core::{PlayerId, Prompt, SelectionDestination};
+use crate::df::helpers::owner_for_source;
 
 pub fn attack_overrides(
     game: &GameState,
@@ -34,14 +35,12 @@ pub fn attack_overrides(
     let Some(attacker) = game.current_player().find_pokemon(attacker_id) else {
         return overrides;
     };
-    if def_id_matches(&attacker.card.def_id, SET, NUMBER)
-        && attack.name == "Pump Out"
-        && has_any_tool(attacker)
-    {
+    if def_id_matches(&attacker.card.def_id, SET, NUMBER) && attack.name == "Pump Out" && has_any_tool(attacker) {
         overrides.pre_weakness_modifier += 20;
     }
     overrides
 }
+
 
 pub fn execute_dig_up(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let owner = match owner_for_source(game, source_id) {
@@ -74,11 +73,12 @@ pub fn execute_dig_up(game: &mut GameState, source_id: CardInstanceId) -> bool {
         min: Some(0),
         max: Some(2),
         destination: SelectionDestination::Hand,
-        effect_description: String::new(),
+    effect_description: String::new(),
     };
     game.set_pending_prompt(prompt, owner);
     true
 }
+
 
 use tcg_core::{PokemonSlot, TriggerKind, TriggerPredicate, TriggerSubscription};
 

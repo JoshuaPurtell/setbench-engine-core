@@ -20,9 +20,10 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 94;
 pub const NAME: &str = "Kingdra ex δ";
 
-use crate::df::helpers::player_has_card;
+
 use tcg_core::runtime_hooks::AttackOverrides;
 use tcg_core::{Attack, CardInstanceId, GameState, Stage};
+use crate::df::helpers::player_has_card;
 
 pub fn attack_overrides(
     game: &GameState,

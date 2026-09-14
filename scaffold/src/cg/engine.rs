@@ -4,7 +4,9 @@
 //! discard timing, Safeguard-style prevent-effects, and Holon Circle.
 
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
-use tcg_core::{Attack, CardDefId, CardInstance, CardInstanceId, GameState, PlayerId, Stage, Type};
+use tcg_core::{
+    Attack, CardDefId, CardInstance, CardInstanceId, GameState, PlayerId, Stage, Type,
+};
 
 pub fn attack_overrides(
     _game: &GameState,

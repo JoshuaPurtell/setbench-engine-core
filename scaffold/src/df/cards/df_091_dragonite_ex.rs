@@ -19,8 +19,9 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 91;
 pub const NAME: &str = "Dragonite ex δ";
 
-use crate::df::helpers::owner_for_source;
 use tcg_core::{CardInstanceId, GameState, PlayerId, Prompt};
+use crate::df::helpers::owner_for_source;
+
 
 pub fn execute_dragon_roar(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let player = match owner_for_source(game, source_id) {
@@ -67,7 +68,10 @@ pub fn execute_dragon_roar(game: &mut GameState, source_id: CardInstanceId) -> b
     true
 }
 
-pub fn resolve_dragon_roar(_game: &mut GameState, _source_id: Option<CardInstanceId>) -> bool {
+pub fn resolve_dragon_roar(
+    _game: &mut GameState,
+    _source_id: Option<CardInstanceId>,
+) -> bool {
     true
 }
 

@@ -132,6 +132,10 @@ pub fn resolve_custom_prompt(
     super::trainers::resolve_custom_prompt(game, effect_id, source_id, target_ids)
 }
 
-pub fn attack_cost_modifier(game: &GameState, attacker_id: CardInstanceId, attack: &Attack) -> i32 {
+pub fn attack_cost_modifier(
+    game: &GameState,
+    attacker_id: CardInstanceId,
+    attack: &Attack,
+) -> i32 {
     super::cards::attack_cost_modifier(game, attacker_id, attack)
 }

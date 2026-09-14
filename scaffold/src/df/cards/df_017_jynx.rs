@@ -17,10 +17,9 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 17;
 pub const NAME: &str = "Jynx δ";
 
+use tcg_core::{GameState, PokemonSelector, PokemonSlot, StatModifierEntry, StatModifierKind, Type};
 use crate::df::helpers::owner_for_source;
-use tcg_core::{
-    GameState, PokemonSelector, PokemonSlot, StatModifierEntry, StatModifierKind, Type,
-};
+
 
 pub fn apply_stages_of_evolution(game: &mut GameState, slot: &PokemonSlot) {
     if !game.is_evolved(slot.card.id) {
@@ -39,6 +38,7 @@ pub fn apply_stages_of_evolution(game: &mut GameState, slot: &PokemonSlot) {
     });
     game.add_stat_modifier(modifier);
 }
+
 
 use tcg_core::runtime_hooks::def_id_matches;
 

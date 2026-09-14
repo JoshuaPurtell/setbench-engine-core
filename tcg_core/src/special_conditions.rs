@@ -14,7 +14,10 @@ pub enum SpecialConditionError {
 pub fn execute_between_turns(game: &mut GameState) -> Result<(), SpecialConditionError> {
     apply_checkup(game)?;
     let outcomes =
-        crate::combat::check_knockouts_all_with_cause(game, crate::KnockoutCause::BetweenTurns);
+        crate::combat::check_knockouts_all_with_cause(
+            game,
+            crate::KnockoutCause::BetweenTurns,
+        );
     let events = game.collect_knockout_events(&outcomes);
     game.event_log.extend(events);
     Ok(())
@@ -39,10 +42,7 @@ fn apply_for_player(
         } else {
             game.opponent_player_mut()
         };
-        let active = target
-            .active
-            .as_mut()
-            .ok_or(SpecialConditionError::MissingActive)?;
+        let active = target.active.as_mut().ok_or(SpecialConditionError::MissingActive)?;
         let target_id = active.card.id;
         let mut poison_damage = 0u16;
         if !active.has_special_condition(SpecialCondition::Paralyzed) {
@@ -66,9 +66,7 @@ fn apply_for_player(
                             active.markers.retain(|m| m.name != "ParalysisCarried");
                         }
                     } else if !carried {
-                        active
-                            .markers
-                            .push(crate::markers::Marker::new("ParalysisCarried"));
+                        active.markers.push(crate::markers::Marker::new("ParalysisCarried"));
                     }
                 }
                 SpecialCondition::Confused => {}
@@ -99,10 +97,7 @@ fn apply_for_player(
         } else {
             game.opponent_player_mut()
         };
-        let active = target
-            .active
-            .as_mut()
-            .ok_or(SpecialConditionError::MissingActive)?;
+        let active = target.active.as_mut().ok_or(SpecialConditionError::MissingActive)?;
         if heads {
             active.remove_special_condition(SpecialCondition::Burned);
         } else {
@@ -126,10 +121,7 @@ fn apply_for_player(
         } else {
             game.opponent_player_mut()
         };
-        let active = target
-            .active
-            .as_mut()
-            .ok_or(SpecialConditionError::MissingActive)?;
+        let active = target.active.as_mut().ok_or(SpecialConditionError::MissingActive)?;
         if heads {
             active.remove_special_condition(SpecialCondition::Asleep);
         }
@@ -157,14 +149,10 @@ mod tests {
             ));
         }
         let mut game = GameState::new(deck1, deck2, 12345, RulesetConfig::default());
-        let mut active1 = PokemonSlot::new(CardInstance::new(
-            CardDefId::new("TEST-A-999"),
-            PlayerId::P1,
-        ));
-        let mut active2 = PokemonSlot::new(CardInstance::new(
-            CardDefId::new("TEST-B-999"),
-            PlayerId::P2,
-        ));
+        let mut active1 =
+            PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-A-999"), PlayerId::P1));
+        let mut active2 =
+            PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-B-999"), PlayerId::P2));
         active1.hp = 80;
         active2.hp = 80;
         game.players[0].active = Some(active1);
@@ -187,20 +175,25 @@ mod tests {
     #[test]
     fn test_poisoned_damage() {
         let mut game = setup_game_with_opponent_bench();
-        let _ = game.players[1]
+        let _ = game
+            .players[1]
             .active
             .as_mut()
             .unwrap()
             .add_special_condition(SpecialCondition::Poisoned);
 
         execute_between_turns(&mut game).unwrap();
-        assert_eq!(game.players[1].active.as_ref().unwrap().damage_counters, 1);
+        assert_eq!(
+            game.players[1].active.as_ref().unwrap().damage_counters,
+            1
+        );
     }
 
     #[test]
     fn test_confusion_self_damage_marker() {
         let mut game = setup_game_with_conditions();
-        let _ = game.players[0]
+        let _ = game
+            .players[0]
             .active
             .as_mut()
             .unwrap()
@@ -213,7 +206,8 @@ mod tests {
     fn test_burn_coin_flip() {
         let mut game = setup_game_with_conditions();
         game.reseed_rng(12345);
-        let _ = game.players[1]
+        let _ = game
+            .players[1]
             .active
             .as_mut()
             .unwrap()

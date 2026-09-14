@@ -34,131 +34,26 @@ pub fn attack_overrides(
     defender_id: CardInstanceId,
 ) -> AttackOverrides {
     let mut overrides = AttackOverrides::default();
-    overrides.merge(cg_003_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_013_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_020_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_022_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_024_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_025_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_027_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_028_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_036_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_037_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_089_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_091_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_092_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_093_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_094_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_095_kyogre_ex::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_096_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_097_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_098_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_099_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
-    overrides.merge(cg_100_attacks::attack_overrides(
-        game,
-        attack,
-        attacker_id,
-        defender_id,
-    ));
+    overrides.merge(cg_003_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_013_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_020_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_022_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_024_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_025_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_027_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_028_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_036_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_037_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_089_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_091_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_092_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_093_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_094_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_095_kyogre_ex::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_096_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_097_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_098_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_099_attacks::attack_overrides(game, attack, attacker_id, defender_id));
+    overrides.merge(cg_100_attacks::attack_overrides(game, attack, attacker_id, defender_id));
     overrides
 }

@@ -127,7 +127,8 @@ impl TriggerBus {
     }
 
     pub fn clear_source(&mut self, source_id: CardInstanceId) {
-        self.subscriptions.retain(|sub| sub.source_id != source_id);
+        self.subscriptions
+            .retain(|sub| sub.source_id != source_id);
     }
 
     pub fn emit(&mut self, event: TriggerEvent) {

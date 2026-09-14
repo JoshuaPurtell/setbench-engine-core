@@ -15,6 +15,7 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 37;
 pub const NAME: &str = "Seadra δ";
 
+
 use tcg_core::runtime_hooks::{def_id_matches, AttackOverrides};
 use tcg_core::{Attack, CardInstanceId, GameState};
 
@@ -31,10 +32,7 @@ pub fn attack_overrides(
     let Some(defender) = game.opponent_player().find_pokemon(defender_id) else {
         return overrides;
     };
-    if def_id_matches(&attacker.card.def_id, SET, NUMBER)
-        && attack.name == "Extra Ball"
-        && defender.is_ex
-    {
+    if def_id_matches(&attacker.card.def_id, SET, NUMBER) && attack.name == "Extra Ball" && defender.is_ex {
         overrides.pre_weakness_modifier += 30;
     }
     overrides

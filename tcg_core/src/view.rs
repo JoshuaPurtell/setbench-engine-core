@@ -3,11 +3,11 @@ use crate::player::PokemonSlot;
 use crate::prompt::Prompt;
 use crate::timers::TimerView;
 use crate::types::{Resistance, Type, Weakness};
-use crate::Attack;
 use crate::CardInstance;
 use crate::CardInstanceId;
-use std::collections::BTreeMap;
+use crate::Attack;
 use tcg_rules_ex::Phase;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PokemonView {

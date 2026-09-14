@@ -18,9 +18,6 @@ impl Marker {
 
     /// Parse a value from the marker name (e.g. "DamageReduction:30" -> 30).
     pub fn parse<T: std::str::FromStr>(&self) -> Option<T> {
-        self.name
-            .split(':')
-            .last()
-            .and_then(|s| s.parse::<T>().ok())
+        self.name.split(':').last().and_then(|s| s.parse::<T>().ok())
     }
 }

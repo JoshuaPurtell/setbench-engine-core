@@ -6,8 +6,15 @@ use std::collections::BTreeMap;
 use thiserror::Error;
 
 use crate::{
-    CardInstanceId, CardSelector, GameState, PlayerId, PokemonSelector, Prompt,
-    SelectionDestination, Stage, Type,
+    CardInstanceId,
+    CardSelector,
+    GameState,
+    PokemonSelector,
+    PlayerId,
+    Prompt,
+    SelectionDestination,
+    Stage,
+    Type,
 };
 use tcg_rules_ex::SpecialCondition;
 
@@ -60,24 +67,10 @@ pub enum EffectAst {
         #[serde(default)]
         notes: Option<String>,
     },
-    DealDamage {
-        target: Target,
-        amount: u32,
-    },
-    DealDamageIfDamaged {
-        target: Target,
-        base: u32,
-        bonus: u32,
-    },
-    DealDamageIfTargetDamaged {
-        target: Target,
-        bonus: u32,
-    },
-    DealDamageByOpponentPrizesTaken {
-        target: Target,
-        base: u32,
-        per_prize: u32,
-    },
+    DealDamage { target: Target, amount: u32 },
+    DealDamageIfDamaged { target: Target, base: u32, bonus: u32 },
+    DealDamageIfTargetDamaged { target: Target, bonus: u32 },
+    DealDamageByOpponentPrizesTaken { target: Target, base: u32, per_prize: u32 },
     DealDamageByPokemonCount {
         player: TargetPlayer,
         selector: PokemonSelector,
@@ -101,104 +94,38 @@ pub enum EffectAst {
         selector: PokemonSelector,
         amount: u32,
     },
-    DealDamageByAttackerDamage {
-        target: Target,
-        base: u32,
-        per_counter: u32,
-    },
-    DealDamageByAttachedEnergy {
-        target: Target,
-        per_energy: u32,
-    },
-    DealDamageByTargetEnergy {
-        target: Target,
-        per_energy: u32,
-    },
-    DealDamageIfTargetDelta {
-        target: Target,
-        amount: u32,
-    },
-    DealDamageIfTargetHasSpecialCondition {
-        target: Target,
-        bonus: u32,
-    },
+    DealDamageByAttackerDamage { target: Target, base: u32, per_counter: u32 },
+    DealDamageByAttachedEnergy { target: Target, per_energy: u32 },
+    DealDamageByTargetEnergy { target: Target, per_energy: u32 },
+    DealDamageIfTargetDelta { target: Target, amount: u32 },
+    DealDamageIfTargetHasSpecialCondition { target: Target, bonus: u32 },
     DealDamageByTargetSpecialConditionCount {
         target: Target,
         per_condition: u32,
         #[serde(default)]
         max_bonus: Option<u32>,
     },
-    IfTargetHasPowerOrBody {
-        target: Target,
-        effect: Box<EffectAst>,
-    },
-    IfTargetIsEx {
-        target: Target,
-        effect: Box<EffectAst>,
-    },
-    IfTargetIsBasic {
-        target: Target,
-        effect: Box<EffectAst>,
-    },
-    IfTargetIsStage {
-        target: Target,
-        stage: Stage,
-        effect: Box<EffectAst>,
-    },
-    IfTargetHasSpecialCondition {
-        target: Target,
-        effect: Box<EffectAst>,
-    },
-    IfTargetDamaged {
-        target: Target,
-        effect: Box<EffectAst>,
-    },
-    IfAttackerHasTool {
-        effect: Box<EffectAst>,
-    },
-    IfAttackerHasEnergy {
-        energy_type: Type,
-        count: u32,
-        effect: Box<EffectAst>,
-    },
-    DealDamageNoModifiers {
-        target: Target,
-        amount: u32,
-    },
+    IfTargetHasPowerOrBody { target: Target, effect: Box<EffectAst> },
+    IfTargetIsEx { target: Target, effect: Box<EffectAst> },
+    IfTargetIsBasic { target: Target, effect: Box<EffectAst> },
+    IfTargetIsStage { target: Target, stage: Stage, effect: Box<EffectAst> },
+    IfTargetHasSpecialCondition { target: Target, effect: Box<EffectAst> },
+    IfTargetDamaged { target: Target, effect: Box<EffectAst> },
+    IfAttackerHasTool { effect: Box<EffectAst> },
+    IfAttackerHasEnergy { energy_type: Type, count: u32, effect: Box<EffectAst> },
+    DealDamageNoModifiers { target: Target, amount: u32 },
     DealDamageNoModifiersWithOverkillRecoil {
         target: Target,
         amount: u32,
         recoil_target: Target,
     },
-    SplitDamage {
-        targets: Vec<Target>,
-        amounts: Vec<u32>,
-    },
-    PlaceDamageCounters {
-        target: Target,
-        counters: u32,
-    },
-    PlaceDamageCountersIfTargetDelta {
-        target: Target,
-        base: u32,
-        delta: u32,
-    },
-    DrawCards {
-        player: TargetPlayer,
-        count: u32,
-    },
-    DrawCardsUpTo {
-        player: TargetPlayer,
-        max: u32,
-    },
-    DrawBottomCards {
-        player: TargetPlayer,
-        count: u32,
-    },
-    SearchDeck {
-        player: TargetPlayer,
-        count: u32,
-    },
+    SplitDamage { targets: Vec<Target>, amounts: Vec<u32> },
+    PlaceDamageCounters { target: Target, counters: u32 },
+    PlaceDamageCountersIfTargetDelta { target: Target, base: u32, delta: u32 },
+    DrawCards { player: TargetPlayer, count: u32 },
+    DrawCardsUpTo { player: TargetPlayer, max: u32 },
+    DrawBottomCards { player: TargetPlayer, count: u32 },
+    SearchDeck { player: TargetPlayer, count: u32 },
     SearchDeckWithSelector {
         player: TargetPlayer,
         selector: CardSelector,
@@ -243,10 +170,6 @@ pub enum EffectAst {
         player: TargetPlayer,
         count: u32,
     },
-    PlayTrainerAsPokemon {
-        hp: u16,
-        pokemon_type: Type,
-    },
     DevolvePokemon {
         target: Target,
         #[serde(default)]
@@ -277,23 +200,15 @@ pub enum EffectAst {
     Sequence {
         effects: Vec<EffectAst>,
     },
-    ApplySpecialCondition {
-        target: Target,
-        condition: SpecialCondition,
-    },
+    ApplySpecialCondition { target: Target, condition: SpecialCondition },
     ApplySpecialConditionIfEnergyAttached {
         target: Target,
         energy_type: Type,
         count: u32,
         condition: SpecialCondition,
     },
-    ClearSpecialConditions {
-        target: Target,
-    },
-    DiscardFromHand {
-        player: TargetPlayer,
-        count: u32,
-    },
+    ClearSpecialConditions { target: Target },
+    DiscardFromHand { player: TargetPlayer, count: u32 },
     DiscardFromHandWithSelector {
         player: TargetPlayer,
         selector: CardSelector,
@@ -311,24 +226,11 @@ pub enum EffectAst {
         #[serde(default)]
         max: Option<u32>,
     },
-    DiscardToHandSize {
-        player: TargetPlayer,
-        hand_size: u32,
-    },
-    DiscardRandomFromHand {
-        player: TargetPlayer,
-        count: u32,
-    },
-    LockPokePowerNextTurn {
-        player: TargetPlayer,
-    },
-    LockTrainerNextTurn {
-        player: TargetPlayer,
-    },
-    HealDamage {
-        target: Target,
-        amount: u32,
-    },
+    DiscardToHandSize { player: TargetPlayer, hand_size: u32 },
+    DiscardRandomFromHand { player: TargetPlayer, count: u32 },
+    LockPokePowerNextTurn { player: TargetPlayer },
+    LockTrainerNextTurn { player: TargetPlayer },
+    HealDamage { target: Target, amount: u32 },
     HealDamageToSelector {
         player: TargetPlayer,
         selector: PokemonSelector,
@@ -366,32 +268,14 @@ pub enum EffectAst {
         #[serde(default)]
         energy_type: Option<Type>,
     },
-    DiscardAttachedTool {
-        target: Target,
-    },
-    DiscardFromDeck {
-        player: TargetPlayer,
-        count: u32,
-    },
-    SwitchActive {
-        player: Option<TargetPlayer>,
-    },
-    SwitchToTarget {
-        player: TargetPlayer,
-    },
-    RevealHand {
-        player: TargetPlayer,
-    },
-    DrawToHandSize {
-        player: TargetPlayer,
-        hand_size: u32,
-    },
-    ShuffleHandIntoDeck {
-        player: TargetPlayer,
-    },
-    ModifyDamage {
-        amount: i32,
-    },
+    DiscardAttachedTool { target: Target },
+    DiscardFromDeck { player: TargetPlayer, count: u32 },
+    SwitchActive { player: Option<TargetPlayer> },
+    SwitchToTarget { player: TargetPlayer },
+    RevealHand { player: TargetPlayer },
+    DrawToHandSize { player: TargetPlayer, hand_size: u32 },
+    ShuffleHandIntoDeck { player: TargetPlayer },
+    ModifyDamage { amount: i32 },
     ContinuousEffect {
         #[serde(default)]
         timing: ContinuousTiming,
@@ -526,17 +410,12 @@ fn printed_weakness_resistance(
         Some(slot) => slot,
         None => return amount,
     };
-    let attack = game
-        .resolving_attack
-        .clone()
-        .or_else(|| match &game.pending_attack {
-            Some(crate::game::PendingAttack::PreDamage {
-                attacker_id,
-                attack,
-                ..
-            }) => Some((*attacker_id, attack.clone())),
-            _ => None,
-        });
+    let attack = game.resolving_attack.clone().or_else(|| match &game.pending_attack {
+        Some(crate::game::PendingAttack::PreDamage { attacker_id, attack, .. }) => {
+            Some((*attacker_id, attack.clone()))
+        }
+        _ => None,
+    });
     let (types, ignore_weakness, ignore_resistance) = match attack {
         Some((attacker_id, attack)) => {
             let overrides = crate::apply_attack_overrides(game, &attack, attacker_id, target_id);
@@ -567,8 +446,7 @@ fn printed_weakness_resistance(
                 }
                 None => vec![Type::Colorless],
             };
-            let ignore_weakness =
-                source_id.is_some_and(|id| game.ignore_weakness_for(id, target_id));
+            let ignore_weakness = source_id.is_some_and(|id| game.ignore_weakness_for(id, target_id));
             let ignore_resistance =
                 source_id.is_some_and(|id| game.ignore_resistance_for(id, target_id));
             (types, ignore_weakness, ignore_resistance)
@@ -633,11 +511,7 @@ pub fn execute_effect_with_source_and_targets(
             }
             Ok(EffectOutcome::Applied)
         }
-        EffectAst::DealDamageIfDamaged {
-            target,
-            base,
-            bonus,
-        } => {
+        EffectAst::DealDamageIfDamaged { target, base, bonus } => {
             for target_id in resolve_target_ids(game, *target, selected_targets)? {
                 let mut damage = *base;
                 if let Some(slot) = game.slot_by_id(target_id) {
@@ -670,11 +544,7 @@ pub fn execute_effect_with_source_and_targets(
             }
             Ok(EffectOutcome::Applied)
         }
-        EffectAst::DealDamageByOpponentPrizesTaken {
-            target,
-            base,
-            per_prize,
-        } => {
+        EffectAst::DealDamageByOpponentPrizesTaken { target, base, per_prize } => {
             let max_prizes = game.rules.prize_cards_per_player() as u32;
             let opponent_prizes = match game.turn.player {
                 PlayerId::P1 => game.players[1].prizes.count(),
@@ -770,11 +640,7 @@ pub fn execute_effect_with_source_and_targets(
             }
             Ok(EffectOutcome::Applied)
         }
-        EffectAst::DealDamageByAttackerDamage {
-            target,
-            base,
-            per_counter,
-        } => {
+        EffectAst::DealDamageByAttackerDamage { target, base, per_counter } => {
             let attacker_counters = source_id
                 .and_then(|id| game.slot_by_id(id))
                 .map(|slot| slot.damage_counters as u32)
@@ -882,12 +748,7 @@ pub fn execute_effect_with_source_and_targets(
                 if let Some(slot) = game.slot_by_id(target_id) {
                     if (game.hooks().card_has_power_or_body)(&slot.card.def_id) {
                         let ids = [target_id];
-                        let _ = execute_effect_with_source_and_targets(
-                            game,
-                            effect,
-                            source_id,
-                            Some(&ids),
-                        );
+                        let _ = execute_effect_with_source_and_targets(game, effect, source_id, Some(&ids));
                     }
                 }
             }
@@ -898,12 +759,7 @@ pub fn execute_effect_with_source_and_targets(
                 if let Some(slot) = game.slot_by_id(target_id) {
                     if slot.is_ex {
                         let ids = [target_id];
-                        let _ = execute_effect_with_source_and_targets(
-                            game,
-                            effect,
-                            source_id,
-                            Some(&ids),
-                        );
+                        let _ = execute_effect_with_source_and_targets(game, effect, source_id, Some(&ids));
                     }
                 }
             }
@@ -914,12 +770,7 @@ pub fn execute_effect_with_source_and_targets(
                 if let Some(slot) = game.slot_by_id(target_id) {
                     if slot.stage == Stage::Basic {
                         let ids = [target_id];
-                        let _ = execute_effect_with_source_and_targets(
-                            game,
-                            effect,
-                            source_id,
-                            Some(&ids),
-                        );
+                        let _ = execute_effect_with_source_and_targets(game, effect, source_id, Some(&ids));
                     }
                 }
             }
@@ -934,12 +785,7 @@ pub fn execute_effect_with_source_and_targets(
                 if let Some(slot) = game.slot_by_id(target_id) {
                     if slot.stage == *stage {
                         let ids = [target_id];
-                        let _ = execute_effect_with_source_and_targets(
-                            game,
-                            effect,
-                            source_id,
-                            Some(&ids),
-                        );
+                        let _ = execute_effect_with_source_and_targets(game, effect, source_id, Some(&ids));
                     }
                 }
             }
@@ -950,12 +796,7 @@ pub fn execute_effect_with_source_and_targets(
                 if let Some(slot) = game.slot_by_id(target_id) {
                     if !slot.special_conditions.is_empty() {
                         let ids = [target_id];
-                        let _ = execute_effect_with_source_and_targets(
-                            game,
-                            effect,
-                            source_id,
-                            Some(&ids),
-                        );
+                        let _ = execute_effect_with_source_and_targets(game, effect, source_id, Some(&ids));
                     }
                 }
             }
@@ -966,12 +807,7 @@ pub fn execute_effect_with_source_and_targets(
                 if let Some(slot) = game.slot_by_id(target_id) {
                     if slot.damage_counters > 0 {
                         let ids = [target_id];
-                        let _ = execute_effect_with_source_and_targets(
-                            game,
-                            effect,
-                            source_id,
-                            Some(&ids),
-                        );
+                        let _ = execute_effect_with_source_and_targets(game, effect, source_id, Some(&ids));
                     }
                 }
             }
@@ -983,12 +819,7 @@ pub fn execute_effect_with_source_and_targets(
                 .and_then(|slot| slot.attached_tool.as_ref())
                 .is_some();
             if has_tool {
-                let _ = execute_effect_with_source_and_targets(
-                    game,
-                    effect,
-                    source_id,
-                    selected_targets,
-                );
+                let _ = execute_effect_with_source_and_targets(game, effect, source_id, selected_targets);
             }
             Ok(EffectOutcome::Applied)
         }
@@ -1011,12 +842,7 @@ pub fn execute_effect_with_source_and_targets(
                 })
                 .unwrap_or(false);
             if meets {
-                let _ = execute_effect_with_source_and_targets(
-                    game,
-                    effect,
-                    source_id,
-                    selected_targets,
-                );
+                let _ = execute_effect_with_source_and_targets(game, effect, source_id, selected_targets);
             }
             Ok(EffectOutcome::Applied)
         }
@@ -1055,15 +881,8 @@ pub fn execute_effect_with_source_and_targets(
                     if overflow > 0 {
                         let recoil_counters = (overflow / 10) as u16;
                         if recoil_counters > 0 {
-                            for recoil_id in
-                                resolve_target_ids(game, *recoil_target, selected_targets)?
-                            {
-                                let _ = game.place_damage_counters(
-                                    recoil_id,
-                                    recoil_counters,
-                                    source_id,
-                                    false,
-                                );
+                            for recoil_id in resolve_target_ids(game, *recoil_target, selected_targets)? {
+                                let _ = game.place_damage_counters(recoil_id, recoil_counters, source_id, false);
                             }
                         }
                     }
@@ -1075,9 +894,7 @@ pub fn execute_effect_with_source_and_targets(
         }
         EffectAst::SplitDamage { targets, amounts } => {
             if targets.len() != amounts.len() {
-                return Err(EffectError::UnimplementedEffect(
-                    "split damage length mismatch",
-                ));
+                return Err(EffectError::UnimplementedEffect("split damage length mismatch"));
             }
             for (target, amount) in targets.iter().zip(amounts.iter()) {
                 let counters = (*amount / 10) as u16;
@@ -1094,11 +911,7 @@ pub fn execute_effect_with_source_and_targets(
             }
             Ok(EffectOutcome::Applied)
         }
-        EffectAst::PlaceDamageCountersIfTargetDelta {
-            target,
-            base,
-            delta,
-        } => {
+        EffectAst::PlaceDamageCountersIfTargetDelta { target, base, delta } => {
             for target_id in resolve_target_ids(game, *target, selected_targets)? {
                 let counters = if game.pokemon_is_delta(target_id) {
                     *delta
@@ -1314,52 +1127,21 @@ pub fn execute_effect_with_source_and_targets(
                 if attached >= *count as usize {
                     break;
                 }
-                let Some(card) = game.players[index].hand.get(id).cloned() else {
-                    continue;
-                };
+                let Some(card) = game.players[index].hand.get(id).cloned() else { continue };
                 let meta = game.card_meta.get(&card.def_id);
                 if !meta.map(|m| m.is_energy).unwrap_or(false) {
                     continue;
                 }
-                let Some(active_id) = game.players[index].active.as_ref().map(|slot| slot.card.id)
-                else {
-                    continue;
-                };
+                let Some(active_id) = game.players[index].active.as_ref().map(|slot| slot.card.id) else { continue };
                 if !crate::custom_abilities::can_attach_energy(game, player_id, id, active_id) {
                     continue;
                 }
-                let Some(card) = game.players[index].hand.remove(id) else {
-                    continue;
-                };
+                let Some(card) = game.players[index].hand.remove(id) else { continue };
                 if let Some(slot) = game.players[index].active.as_mut() {
                     slot.attached_energy.push(card);
                     attached += 1;
                 }
             }
-            Ok(EffectOutcome::Applied)
-        }
-        EffectAst::PlayTrainerAsPokemon { hp, pokemon_type } => {
-            let Some(card) = game.pending_trainer.take() else {
-                return Err(EffectError::InvalidCardType);
-            };
-            let owner = card.owner;
-            let index = if owner == PlayerId::P1 { 0 } else { 1 };
-            if game.players[index].bench.len() >= 5 {
-                game.pending_trainer = Some(card);
-                return Err(EffectError::BenchFull);
-            }
-            let id = card.id;
-            let mut slot = crate::PokemonSlot::new(card);
-            slot.hp = *hp;
-            slot.types = vec![*pokemon_type];
-            slot.stage = Stage::Basic;
-            game.players[index].bench.push(slot);
-            if let Some(slot) = game.players[index].bench.last().cloned() {
-                crate::custom_abilities::register_card_triggers(game, &slot);
-            }
-            let mut marker = crate::Marker::new("CannotRetreat");
-            marker.expires_after_turn = None;
-            let _ = game.add_marker(id, marker);
             Ok(EffectOutcome::Applied)
         }
         EffectAst::DevolvePokemon {
@@ -1433,12 +1215,8 @@ pub fn execute_effect_with_source_and_targets(
         }
         EffectAst::Sequence { effects } => {
             for (idx, effect) in effects.iter().enumerate() {
-                let outcome = execute_effect_with_source_and_targets(
-                    game,
-                    effect,
-                    source_id,
-                    selected_targets,
-                )?;
+                let outcome =
+                    execute_effect_with_source_and_targets(game, effect, source_id, selected_targets)?;
                 if let EffectOutcome::Prompt(prompt) = outcome {
                     if idx + 1 < effects.len() {
                         let remaining = effects[idx + 1..].to_vec();
@@ -1446,11 +1224,9 @@ pub fn execute_effect_with_source_and_targets(
                             let mut combined = Vec::with_capacity(1 + remaining.len());
                             combined.push(existing);
                             combined.extend(remaining);
-                            game.pending_effect_ast =
-                                Some(EffectAst::Sequence { effects: combined });
+                            game.pending_effect_ast = Some(EffectAst::Sequence { effects: combined });
                         } else {
-                            game.pending_effect_ast =
-                                Some(EffectAst::Sequence { effects: remaining });
+                            game.pending_effect_ast = Some(EffectAst::Sequence { effects: remaining });
                         }
                         game.pending_effect_source_id = source_id;
                     }
@@ -1822,11 +1598,10 @@ pub fn execute_effect_with_source_and_targets(
                         PlayerId::P1 => 0,
                         PlayerId::P2 => 1,
                     };
-                    game.pending_broadcast_events
-                        .push(crate::GameEvent::ToolDiscarded {
-                            player: tool.owner,
-                            tool_id: tool.id,
-                        });
+                    game.pending_broadcast_events.push(crate::GameEvent::ToolDiscarded {
+                        player: tool.owner,
+                        tool_id: tool.id,
+                    });
                     game.players[owner_index].discard.add(tool);
                 }
             }
@@ -1871,7 +1646,6 @@ pub fn execute_effect_with_source_and_targets(
                 }
                 target.bench.push(outgoing_active);
             }
-            crate::apply_tool_stadium_effects(game);
             Ok(EffectOutcome::Applied)
         }
         EffectAst::SwitchToTarget { player } => {
@@ -1905,7 +1679,6 @@ pub fn execute_effect_with_source_and_targets(
                 }
                 player_state.bench.push(outgoing_active);
             }
-            crate::apply_tool_stadium_effects(game);
             Ok(EffectOutcome::Applied)
         }
         EffectAst::RevealHand { player } => {
@@ -1953,49 +1726,49 @@ pub fn execute_effect_with_source_and_targets(
             game.add_damage_modifier(*amount);
             Ok(EffectOutcome::Applied)
         }
-        EffectAst::ContinuousEffect { timing, effect } => match timing {
-            ContinuousTiming::AttackDamage => match effect.as_ref() {
-                EffectAst::ModifyDamage { amount } => {
-                    game.add_continuous_damage_modifier(*amount);
-                    Ok(EffectOutcome::Applied)
-                }
-                EffectAst::NoOp => Ok(EffectOutcome::Applied),
-                _ => Err(EffectError::UnimplementedEffect("ContinuousAttackEffect")),
-            },
-            ContinuousTiming::BetweenTurns => match effect.as_ref() {
-                EffectAst::DealDamage { target, amount } => {
-                    let counters = (*amount / 10) as u16;
-                    for target_id in resolve_target_ids(game, *target, None)? {
-                        game.add_between_turns_effect(target_id, counters, source_id);
+        EffectAst::ContinuousEffect { timing, effect } => {
+            match timing {
+                ContinuousTiming::AttackDamage => match effect.as_ref() {
+                    EffectAst::ModifyDamage { amount } => {
+                        game.add_continuous_damage_modifier(*amount);
+                        Ok(EffectOutcome::Applied)
                     }
-                    Ok(EffectOutcome::Applied)
-                }
-                EffectAst::PlaceDamageCounters { target, counters } => {
-                    for target_id in resolve_target_ids(game, *target, None)? {
-                        game.add_between_turns_effect(target_id, *counters as u16, source_id);
-                    }
-                    Ok(EffectOutcome::Applied)
-                }
-                EffectAst::SplitDamage { targets, amounts } => {
-                    if targets.len() != amounts.len() {
-                        return Err(EffectError::UnimplementedEffect(
-                            "ContinuousBetweenTurnsSplitMismatch",
-                        ));
-                    }
-                    for (target, amount) in targets.iter().zip(amounts.iter()) {
+                    EffectAst::NoOp => Ok(EffectOutcome::Applied),
+                    _ => Err(EffectError::UnimplementedEffect("ContinuousAttackEffect")),
+                },
+                ContinuousTiming::BetweenTurns => match effect.as_ref() {
+                    EffectAst::DealDamage { target, amount } => {
                         let counters = (*amount / 10) as u16;
                         for target_id in resolve_target_ids(game, *target, None)? {
                             game.add_between_turns_effect(target_id, counters, source_id);
                         }
+                        Ok(EffectOutcome::Applied)
                     }
-                    Ok(EffectOutcome::Applied)
-                }
-                EffectAst::NoOp => Ok(EffectOutcome::Applied),
-                _ => Err(EffectError::UnimplementedEffect(
-                    "ContinuousBetweenTurnsEffect",
-                )),
-            },
-        },
+                    EffectAst::PlaceDamageCounters { target, counters } => {
+                        for target_id in resolve_target_ids(game, *target, None)? {
+                            game.add_between_turns_effect(target_id, *counters as u16, source_id);
+                        }
+                        Ok(EffectOutcome::Applied)
+                    }
+                    EffectAst::SplitDamage { targets, amounts } => {
+                        if targets.len() != amounts.len() {
+                            return Err(EffectError::UnimplementedEffect(
+                                "ContinuousBetweenTurnsSplitMismatch",
+                            ));
+                        }
+                        for (target, amount) in targets.iter().zip(amounts.iter()) {
+                            let counters = (*amount / 10) as u16;
+                            for target_id in resolve_target_ids(game, *target, None)? {
+                                game.add_between_turns_effect(target_id, counters, source_id);
+                            }
+                        }
+                        Ok(EffectOutcome::Applied)
+                    }
+                    EffectAst::NoOp => Ok(EffectOutcome::Applied),
+                    _ => Err(EffectError::UnimplementedEffect("ContinuousBetweenTurnsEffect")),
+                },
+            }
+        }
         EffectAst::ChoosePokemonTargets {
             player,
             selector,
@@ -2019,12 +1792,7 @@ pub fn execute_effect_with_source_and_targets(
                 valid_targets: options,
                 effect_description: String::new(),
             };
-            game.set_pending_effect_prompt(
-                prompt.clone(),
-                player_id,
-                effect.as_ref().clone(),
-                source_id,
-            );
+            game.set_pending_effect_prompt(prompt.clone(), player_id, effect.as_ref().clone(), source_id);
             Ok(EffectOutcome::Prompt(prompt))
         }
         EffectAst::ChooseCardsInPlay { player, min, max } => {
@@ -2068,29 +1836,14 @@ pub fn execute_effect_with_source_and_targets(
         } => {
             for _ in 0..*count {
                 if game.flip_coin() {
-                    execute_effect_with_source_and_targets(
-                        game,
-                        on_heads,
-                        source_id,
-                        selected_targets,
-                    )?;
+                    execute_effect_with_source_and_targets(game, on_heads, source_id, selected_targets)?;
                 } else {
-                    execute_effect_with_source_and_targets(
-                        game,
-                        on_tails,
-                        source_id,
-                        selected_targets,
-                    )?;
+                    execute_effect_with_source_and_targets(game, on_tails, source_id, selected_targets)?;
                 }
             }
             Ok(EffectOutcome::Applied)
         }
-        EffectAst::FlipCoinsByPokemonCount {
-            player,
-            selector,
-            on_heads,
-            on_tails,
-        } => {
+        EffectAst::FlipCoinsByPokemonCount { player, selector, on_heads, on_tails } => {
             let player_id = match player {
                 TargetPlayer::Current => game.turn.player,
                 TargetPlayer::Opponent => other_player(game.turn.player),
@@ -2098,31 +1851,16 @@ pub fn execute_effect_with_source_and_targets(
             let count = selector.select_ids(game, player_id).len();
             for _ in 0..count {
                 if game.flip_coin() {
-                    execute_effect_with_source_and_targets(
-                        game,
-                        on_heads,
-                        source_id,
-                        selected_targets,
-                    )?;
+                    execute_effect_with_source_and_targets(game, on_heads, source_id, selected_targets)?;
                 } else {
-                    execute_effect_with_source_and_targets(
-                        game,
-                        on_tails,
-                        source_id,
-                        selected_targets,
-                    )?;
+                    execute_effect_with_source_and_targets(game, on_tails, source_id, selected_targets)?;
                 }
             }
             Ok(EffectOutcome::Applied)
         }
-        EffectAst::FlipCoinsVariableDamage {
-            count,
-            damage_by_heads,
-        } => {
+        EffectAst::FlipCoinsVariableDamage { count, damage_by_heads } => {
             if damage_by_heads.len() != *count as usize + 1 {
-                return Err(EffectError::UnimplementedEffect(
-                    "variable coin damage table length mismatch",
-                ));
+                return Err(EffectError::UnimplementedEffect("variable coin damage table length mismatch"));
             }
             let heads = (0..*count).filter(|_| game.flip_coin()).count();
             game.add_damage_modifier(damage_by_heads[heads]);
@@ -2184,15 +1922,11 @@ pub fn execute_effect_with_source_and_targets(
                     };
                     match destination {
                         SelectionDestination::Hand => game.players[player_index].hand.add(card),
-                        SelectionDestination::Discard => {
-                            game.players[player_index].discard.add(card)
-                        }
+                        SelectionDestination::Discard => game.players[player_index].discard.add(card),
                         SelectionDestination::DeckTop => {
                             game.players[player_index].deck.add_to_top(card);
                         }
-                        SelectionDestination::DeckBottom => {
-                            game.players[player_index].deck.add(card)
-                        }
+                        SelectionDestination::DeckBottom => game.players[player_index].deck.add(card),
                         SelectionDestination::Bench => {
                             if game.players[player_index].bench.len() >= 5 {
                                 return Err(EffectError::BenchFull);
@@ -2282,7 +2016,11 @@ pub fn execute_effect_with_source_and_targets(
                 PlayerId::P2 => &game.players[1],
             };
             let mut energy_count = 0u32;
-            for slot in player_state.active.iter().chain(player_state.bench.iter()) {
+            for slot in player_state
+                .active
+                .iter()
+                .chain(player_state.bench.iter())
+            {
                 for energy in &slot.attached_energy {
                     let provides = game.energy_provides(energy);
                     if provides.contains(energy_type) {
@@ -2291,10 +2029,7 @@ pub fn execute_effect_with_source_and_targets(
                 }
             }
             if energy_count == 0 {
-                eprintln!(
-                    "[DealDamageByEnergyInPlay] No {:?} energy found for {:?}",
-                    energy_type, player_id
-                );
+                eprintln!("[DealDamageByEnergyInPlay] No {:?} energy found for {:?}", energy_type, player_id);
                 return Ok(EffectOutcome::Applied);
             }
             let total = per_energy.saturating_mul(energy_count);
@@ -2404,25 +2139,13 @@ pub fn execute_effect_with_source_and_targets(
                         TargetPlayer::Current => game.turn.player,
                         TargetPlayer::Opponent => other_player(game.turn.player),
                     };
-                    game.stadium_in_play()
-                        .map(|card| card.owner == want)
-                        .unwrap_or(false)
+                    game.stadium_in_play().map(|card| card.owner == want).unwrap_or(false)
                 }
             };
             if take {
-                execute_effect_with_source_and_targets(
-                    game,
-                    then_effect,
-                    source_id,
-                    selected_targets,
-                )
+                execute_effect_with_source_and_targets(game, then_effect, source_id, selected_targets)
             } else {
-                execute_effect_with_source_and_targets(
-                    game,
-                    else_effect,
-                    source_id,
-                    selected_targets,
-                )
+                execute_effect_with_source_and_targets(game, else_effect, source_id, selected_targets)
             }
         }
         EffectAst::MoveAttachedEnergy {
@@ -2478,11 +2201,7 @@ pub fn execute_effect_with_source_and_targets(
             }
 
             // Begin the move energy flow
-            let resolved_min = if *optional {
-                0
-            } else {
-                min.unwrap_or(*count) as usize
-            };
+            let resolved_min = if *optional { 0 } else { min.unwrap_or(*count) as usize };
             let resolved_max = *count as usize;
 
             let started = game.begin_move_attached_energy(
@@ -2605,11 +2324,19 @@ fn find_slot_mut(
 mod tests {
     use super::*;
     use crate::{
-        Action, CardDefId, CardInstance, CardMeta, CardMetaMap, GameState, PlayerId, PokemonSlot,
-        Stage, Type,
+        Action,
+        CardDefId,
+        CardInstance,
+        CardMeta,
+        CardMetaMap,
+        GameState,
+        PlayerId,
+        PokemonSlot,
+        Stage,
+        Type,
     };
-    use serde_json::json;
     use serde_json::Value;
+    use serde_json::json;
     use std::fs;
     use tcg_rules_ex::RulesetConfig;
 
@@ -2745,8 +2472,7 @@ mod tests {
             card_meta,
         );
         let basic = CardInstance::new(CardDefId::new("TEST-001"), PlayerId::P1);
-        let mut stage1 =
-            PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-010"), PlayerId::P1));
+        let mut stage1 = PokemonSlot::new(CardInstance::new(CardDefId::new("TEST-010"), PlayerId::P1));
         stage1.stage = Stage::Stage1;
         stage1.damage_counters = 4;
         stage1.evolution_stack.push(basic.clone());
@@ -2918,19 +2644,9 @@ mod tests {
             amount: 30,
         };
 
-        let before = game
-            .opponent_player()
-            .active
-            .as_ref()
-            .unwrap()
-            .damage_counters;
+        let before = game.opponent_player().active.as_ref().unwrap().damage_counters;
         let _ = execute_effect(&mut game, &effect).unwrap();
-        let after = game
-            .opponent_player()
-            .active
-            .as_ref()
-            .unwrap()
-            .damage_counters;
+        let after = game.opponent_player().active.as_ref().unwrap().damage_counters;
         assert_eq!(after, before + 3);
     }
 
@@ -2950,12 +2666,7 @@ mod tests {
         };
 
         let _ = execute_effect(&mut game, &effect).unwrap();
-        let damage = game
-            .opponent_player()
-            .active
-            .as_ref()
-            .unwrap()
-            .damage_counters;
+        let damage = game.opponent_player().active.as_ref().unwrap().damage_counters;
         if expected_heads {
             assert_eq!(damage, 2);
         } else {
@@ -2999,9 +2710,7 @@ mod tests {
     fn test_switch_active_effect() {
         let mut game = setup_game_with_actives();
         let bench_card = CardInstance::new(CardDefId::new("TEST-998"), PlayerId::P1);
-        game.players[0]
-            .bench
-            .push(PokemonSlot::new(bench_card.clone()));
+        game.players[0].bench.push(PokemonSlot::new(bench_card.clone()));
         let active_before = game.players[0].active.as_ref().unwrap().card.id;
 
         let effect = EffectAst::SwitchActive { player: None };
@@ -3020,11 +2729,7 @@ mod tests {
         let effect = load_effect_from_card("../examples/basic_damage_pokemon.json");
         let _ = execute_effect(&mut game, &effect).unwrap();
         assert_eq!(
-            game.opponent_player()
-                .active
-                .as_ref()
-                .unwrap()
-                .damage_counters,
+            game.opponent_player().active.as_ref().unwrap().damage_counters,
             2
         );
 
@@ -3033,12 +2738,7 @@ mod tests {
         let expected_heads = game.peek_coin_flip();
         let effect = load_effect_from_card("../examples/coin_flip_pokemon.json");
         let _ = execute_effect(&mut game, &effect).unwrap();
-        let damage = game
-            .opponent_player()
-            .active
-            .as_ref()
-            .unwrap()
-            .damage_counters;
+        let damage = game.opponent_player().active.as_ref().unwrap().damage_counters;
         if expected_heads {
             assert_eq!(damage, 2);
         } else {
@@ -3055,11 +2755,7 @@ mod tests {
         let effect = load_effect_from_card("../examples/trainer_damage.json");
         let _ = execute_effect(&mut game, &effect).unwrap();
         assert_eq!(
-            game.opponent_player()
-                .active
-                .as_ref()
-                .unwrap()
-                .damage_counters,
+            game.opponent_player().active.as_ref().unwrap().damage_counters,
             1
         );
 

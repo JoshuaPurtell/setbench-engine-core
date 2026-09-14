@@ -19,8 +19,9 @@ pub const SET: &str = "DF";
 pub const NUMBER: u32 = 92;
 pub const NAME: &str = "Flygon ex δ";
 
-use crate::df::helpers::owner_for_source;
 use tcg_core::{CardInstanceId, GameState, PlayerId, Stage};
+use crate::df::helpers::owner_for_source;
+
 
 pub fn execute_sand_damage(game: &mut GameState, source_id: CardInstanceId) -> bool {
     let owner = match owner_for_source(game, source_id) {
@@ -56,8 +57,9 @@ pub fn execute_sand_damage(game: &mut GameState, source_id: CardInstanceId) -> b
     true
 }
 
-use tcg_core::runtime_hooks::def_id_matches;
+
 use tcg_core::{PokemonSlot, TriggerKind, TriggerPredicate, TriggerSubscription};
+use tcg_core::runtime_hooks::def_id_matches;
 
 pub fn register_triggers(game: &mut GameState, slot: &PokemonSlot) {
     if !def_id_matches(&slot.card.def_id, SET, NUMBER) {

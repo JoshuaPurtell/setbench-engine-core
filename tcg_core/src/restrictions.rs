@@ -1,6 +1,6 @@
 use crate::ids::{CardInstanceId, PlayerId};
-use crate::selectors::PokemonSelector;
 use crate::GameState;
+use crate::selectors::PokemonSelector;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum RestrictionKind {
@@ -9,7 +9,6 @@ pub enum RestrictionKind {
     UseBody,
     AttachEnergy,
     Retreat,
-    Evolve,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -82,7 +81,10 @@ impl Restriction {
                 Some(id) => id,
                 None => return false,
             };
-            let slot = game.players.iter().find_map(|p| p.find_pokemon(pokemon_id));
+            let slot = game
+                .players
+                .iter()
+                .find_map(|p| p.find_pokemon(pokemon_id));
             if let Some(slot) = slot {
                 return selector.matches(game, slot);
             }
