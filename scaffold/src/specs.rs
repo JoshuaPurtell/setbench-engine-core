@@ -14,5 +14,3 @@ pub struct TrainerSpec {
     pub trainer_kind: &'static str,
     pub notes: &'static str,
 }
-
-
