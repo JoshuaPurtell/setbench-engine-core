@@ -55,6 +55,8 @@ pub type ExecutePowerFn = fn(&mut GameState, &str, CardInstanceId) -> bool;
 pub type RegisterTriggersFn = fn(&mut GameState, &PokemonSlot);
 pub type ApplyToolStadiumEffectsFn = fn(&mut GameState);
 pub type CanAttachToolFn = fn(&GameState, PlayerId, CardInstanceId, CardInstanceId) -> bool;
+/// (game, player, trainer card in hand) -> may this Trainer be played now?
+pub type CanPlayTrainerFn = fn(&GameState, PlayerId, CardInstanceId) -> bool;
 /// (game, player, energy_id in hand, target Pokemon) -> may this energy be attached there?
 pub type CanAttachEnergyFn = fn(&GameState, PlayerId, CardInstanceId, CardInstanceId) -> bool;
 pub type OnToolAttachedFn = fn(&mut GameState, CardInstanceId, CardInstanceId);
@@ -108,6 +110,8 @@ pub struct RuntimeHooks {
     pub apply_tool_stadium_effects: ApplyToolStadiumEffectsFn,
     /// Check if a tool can be attached to a target
     pub can_attach_tool: CanAttachToolFn,
+    /// Apply card-specific Trainer play restrictions (default: yes).
+    pub can_play_trainer: CanPlayTrainerFn,
     /// Check if an energy card from hand can be attached to a target (default: yes)
     pub can_attach_energy: CanAttachEnergyFn,
     /// Called when a tool is attached
@@ -163,6 +167,7 @@ impl RuntimeHooks {
             register_triggers: |_, _| {},
             apply_tool_stadium_effects: |_| {},
             can_attach_tool: |_, _, _, _| true,
+            can_play_trainer: |_, _, _| true,
             can_attach_energy: |_, _, _, _| true,
             on_tool_attached: |_, _, _| {},
             energy_provides_override: |_, _| None,

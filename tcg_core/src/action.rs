@@ -432,6 +432,9 @@ pub fn can_execute(game: &GameState, action: &Action) -> Result<(), ActionError>
             if trainer_kind.is_none() && (meta.is_tool || meta.is_stadium) {
                 return Err(ActionError::InvalidCardType);
             }
+            if !(game.hooks().can_play_trainer)(game, acting_player, *card_id) {
+                return Err(ActionError::TrainerNotAllowedThisTurn);
+            }
             let kind = trainer_kind.unwrap_or("Item");
             if game.is_trainer_locked(acting_player) && kind != "Supporter" {
                 return Err(ActionError::TrainerNotAllowedThisTurn);
@@ -3170,6 +3173,54 @@ mod tests {
             },
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn trainer_play_respects_card_specific_legality_hook() {
+        fn reject_trainer(_: &GameState, _: PlayerId, _: CardInstanceId) -> bool {
+            false
+        }
+
+        let mut game = setup_game();
+        let trainer = CardInstance::new(CardDefId::new("TEST-TRAINER"), PlayerId::P1);
+        let trainer_id = trainer.id;
+        game.card_meta.insert(
+            trainer.def_id.clone(),
+            CardMeta {
+                name: "Test Trainer".to_owned(),
+                is_basic: false,
+                is_tool: false,
+                is_stadium: false,
+                is_pokemon: false,
+                is_energy: false,
+                hp: 0,
+                energy_kind: None,
+                provides: Vec::new(),
+                trainer_kind: Some("Item".to_owned()),
+                is_ex: false,
+                is_star: false,
+                is_delta: false,
+                stage: Stage::Basic,
+                types: Vec::new(),
+                weakness: None,
+                resistance: None,
+                retreat_cost: None,
+                trainer_effect: None,
+                evolves_from: None,
+                attacks: Vec::new(),
+                card_type: String::new(),
+                delta_species: false,
+            },
+        );
+        game.current_player_mut().hand.add(trainer);
+        let mut hooks = crate::runtime_hooks::RuntimeHooks::empty();
+        hooks.can_play_trainer = reject_trainer;
+        game.set_hooks(hooks);
+
+        assert!(matches!(
+            can_execute(&game, &Action::PlayTrainer { card_id: trainer_id }),
+            Err(ActionError::TrainerNotAllowedThisTurn)
+        ));
     }
 
     #[test]

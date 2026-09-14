@@ -94,6 +94,7 @@ fn composed<const M: u8>() -> RuntimeHooks {
         register_triggers: register_triggers::<M>,
         apply_tool_stadium_effects: apply_tool_stadium_effects::<M>,
         can_attach_tool: can_attach_tool::<M>,
+        can_play_trainer: can_play_trainer::<M>,
         can_attach_energy: can_attach_energy::<M>,
         on_tool_attached: on_tool_attached::<M>,
         energy_provides_override: energy_provides_override::<M>,
@@ -219,6 +220,14 @@ fn can_attach_tool<const M: u8>(
     target_id: CardInstanceId,
 ) -> bool {
     loaded::<M>().all(|(_, hooks)| (hooks.can_attach_tool)(game, player, tool_id, target_id))
+}
+
+fn can_play_trainer<const M: u8>(
+    game: &GameState,
+    player: PlayerId,
+    card_id: CardInstanceId,
+) -> bool {
+    loaded::<M>().all(|(_, hooks)| (hooks.can_play_trainer)(game, player, card_id))
 }
 
 fn can_attach_energy<const M: u8>(
