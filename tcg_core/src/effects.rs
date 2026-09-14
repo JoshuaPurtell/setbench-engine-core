@@ -123,6 +123,7 @@ pub enum EffectAst {
     PlaceDamageCounters { target: Target, counters: u32 },
     PlaceDamageCountersIfTargetDelta { target: Target, base: u32, delta: u32 },
     DrawCards { player: TargetPlayer, count: u32 },
+    DrawBottomCards { player: TargetPlayer, count: u32 },
     SearchDeck { player: TargetPlayer, count: u32 },
     SearchDeckWithSelector {
         player: TargetPlayer,
@@ -284,6 +285,17 @@ pub enum EffectAst {
         count: u32,
         on_heads: Box<EffectAst>,
         on_tails: Box<EffectAst>,
+    },
+    FlipCoinsByPokemonCount {
+        player: TargetPlayer,
+        selector: PokemonSelector,
+        on_heads: Box<EffectAst>,
+        on_tails: Box<EffectAst>,
+    },
+    FlipCoinsVariableDamage {
+        count: u32,
+        /// Damage modifiers indexed by number of heads; must contain count + 1 entries.
+        damage_by_heads: Vec<i32>,
     },
     FlipCoinsSearchDeckWithSelector {
         player: TargetPlayer,
@@ -918,6 +930,14 @@ pub fn execute_effect_with_source_and_targets(
                 TargetPlayer::Opponent => game.turn.player.opponent(),
             };
             let _ = game.draw_cards_with_events(target_player, count);
+            Ok(EffectOutcome::Applied)
+        }
+        EffectAst::DrawBottomCards { player, count } => {
+            let target_player = match player {
+                TargetPlayer::Current => game.turn.player,
+                TargetPlayer::Opponent => game.turn.player.opponent(),
+            };
+            let _ = game.draw_bottom_cards_with_events(target_player, *count as usize);
             Ok(EffectOutcome::Applied)
         }
         EffectAst::SearchDeck { player, count } => {
@@ -1809,6 +1829,29 @@ pub fn execute_effect_with_source_and_targets(
             }
             Ok(EffectOutcome::Applied)
         }
+        EffectAst::FlipCoinsByPokemonCount { player, selector, on_heads, on_tails } => {
+            let player_id = match player {
+                TargetPlayer::Current => game.turn.player,
+                TargetPlayer::Opponent => other_player(game.turn.player),
+            };
+            let count = selector.select_ids(game, player_id).len();
+            for _ in 0..count {
+                if game.flip_coin() {
+                    execute_effect_with_source_and_targets(game, on_heads, source_id, selected_targets)?;
+                } else {
+                    execute_effect_with_source_and_targets(game, on_tails, source_id, selected_targets)?;
+                }
+            }
+            Ok(EffectOutcome::Applied)
+        }
+        EffectAst::FlipCoinsVariableDamage { count, damage_by_heads } => {
+            if damage_by_heads.len() != *count as usize + 1 {
+                return Err(EffectError::UnimplementedEffect("variable coin damage table length mismatch"));
+            }
+            let heads = (0..*count).filter(|_| game.flip_coin()).count();
+            game.add_damage_modifier(damage_by_heads[heads]);
+            Ok(EffectOutcome::Applied)
+        }
         EffectAst::FlipCoinsSearchDeckWithSelector {
             player,
             selector,
@@ -2615,6 +2658,38 @@ mod tests {
         } else {
             assert_eq!(damage, 0);
         }
+    }
+
+    #[test]
+    fn variable_coin_damage_uses_the_heads_table() {
+        let mut game = setup_game_with_actives();
+        game.reseed_rng(12345);
+        let mut probe = game.clone();
+        let heads = (0..3).filter(|_| probe.flip_coin()).count();
+        let effect = EffectAst::FlipCoinsVariableDamage {
+            count: 3,
+            damage_by_heads: vec![0, 10, 30, 50],
+        };
+        execute_effect(&mut game, &effect).unwrap();
+        assert_eq!(
+            game.peek_attack_damage_modifier(
+                game.current_player().active.as_ref().unwrap().card.id,
+                game.opponent_player().active.as_ref().unwrap().card.id,
+            ),
+            [0, 10, 30, 50][heads]
+        );
+    }
+
+    #[test]
+    fn bottom_draw_takes_the_oldest_deck_cards() {
+        let mut game = setup_game_with_actives();
+        let bottom = game.current_player().deck.order()[0];
+        let effect = EffectAst::DrawBottomCards {
+            player: TargetPlayer::Current,
+            count: 2,
+        };
+        execute_effect(&mut game, &effect).unwrap();
+        assert!(game.current_player().hand.contains(bottom));
     }
 
     #[test]

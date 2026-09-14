@@ -113,6 +113,12 @@ fn effect_is_pre_damage_modifier(effect: &crate::EffectAst) -> bool {
             let tails_ok = matches!(on_tails.as_ref(), crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp);
             heads_ok && tails_ok
         }
+        crate::EffectAst::FlipCoinsByPokemonCount { on_heads, on_tails, .. } => {
+            let heads_ok = matches!(on_heads.as_ref(), crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp);
+            let tails_ok = matches!(on_tails.as_ref(), crate::EffectAst::ModifyDamage { .. } | crate::EffectAst::NoOp);
+            heads_ok && tails_ok
+        }
+        crate::EffectAst::FlipCoinsVariableDamage { .. } => true,
         _ => false,
     }
 }

@@ -1151,6 +1151,25 @@ impl GameState {
         ids
     }
 
+    /// Draw cards from the bottom of a player's deck and emit the normal draw events.
+    pub fn draw_bottom_cards_with_events(
+        &mut self,
+        player: PlayerId,
+        count: usize,
+    ) -> Vec<crate::ids::CardInstanceId> {
+        let idx = match player { PlayerId::P1 => 0, PlayerId::P2 => 1 };
+        let mut ids = Vec::new();
+        for _ in 0..count {
+            let Some(card) = self.players[idx].deck.draw_bottom() else { break; };
+            ids.push(card.id);
+            self.players[idx].hand.add(card);
+        }
+        for card_id in &ids {
+            self.pending_broadcast_events.push(GameEvent::CardDrawn { player, card_id: *card_id });
+        }
+        ids
+    }
+
     pub fn place_damage_counters(
         &mut self,
         pokemon_id: crate::ids::CardInstanceId,
